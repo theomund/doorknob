@@ -17,6 +17,8 @@
 FROM quay.io/fedora/fedora:41
 RUN dnf copr enable -y mczernek/vale 
 RUN dnf install -y \
+    bash-completion-2.16 \
+    gcc-14.2.1 \
     git-2.48.1 \
     gnupg2-2.4.5 \
     just-1.39.0 \
@@ -26,3 +28,4 @@ RUN dnf install -y \
     && dnf clean all
 RUN useradd -m developer
 USER developer
+RUN rustup-init -y --default-toolchain 1.85.0
