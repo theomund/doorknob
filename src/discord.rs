@@ -16,54 +16,35 @@
 
 use std::env;
 
-use serenity::async_trait;
-use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
-use serenity::prelude::{Client, Context, EventHandler, GatewayIntents};
-use serenity::{Error, Result};
+use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
+use serenity::prelude::{Client, GatewayIntents};
 use tracing::{error, info};
 
-struct Handler;
+struct Data;
 
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, ctx: Context, msg: Message) {
-        if let Err(why) = self.parse(ctx, msg).await {
-            error!("Failed to parse message: {why:?}");
-        }
-    }
+type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    async fn ready(&self, _: Context, ready: Ready) {
-        info!("{} is connected!", ready.user.name);
-    }
+type Context<'a> = poise::Context<'a, Data, Error>;
+
+#[poise::command(slash_command, prefix_command)]
+async fn join(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Joining voice channel.").await?;
+
+    Ok(())
 }
 
-impl Handler {
-    async fn parse(&self, ctx: Context, msg: Message) -> Result<(), Error> {
-        let author = msg.author.display_name();
+#[poise::command(slash_command, prefix_command)]
+async fn leave(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Leaving voice channel.").await?;
 
-        match msg.content.as_str() {
-            "!join" => {
-                info!("{author} invoked the join command.");
-                msg.channel_id
-                    .say(&ctx.http, "Joining voice channel.")
-                    .await?;
-            }
-            "!leave" => {
-                info!("{author} invoked the leave command.");
-                msg.channel_id
-                    .say(&ctx.http, "Leaving voice channel.")
-                    .await?;
-            }
-            "!ping" => {
-                info!("{author} invoked the ping command.");
-                msg.channel_id.say(&ctx.http, "Pong!").await?;
-            }
-            _ => {}
-        }
+    Ok(())
+}
 
-        Ok(())
-    }
+#[poise::command(slash_command, prefix_command)]
+async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Pong!").await?;
+
+    Ok(())
 }
 
 pub async fn init() {
@@ -73,8 +54,37 @@ pub async fn init() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
+    let framework = Framework::builder()
+        .options(FrameworkOptions {
+            commands: vec![join(), leave(), ping()],
+            prefix_options: PrefixFrameworkOptions {
+                prefix: Some("!".into()),
+                ..Default::default()
+            },
+            pre_command: |ctx| {
+                Box::pin(async move {
+                    info!(
+                        "{} has invoked the {} command.",
+                        ctx.author().display_name(),
+                        ctx.command().qualified_name
+                    );
+                })
+            },
+            ..Default::default()
+        })
+        .setup(|ctx, ready, framework| {
+            Box::pin(async move {
+                info!("{} has connected!", ready.user.name);
+
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                Ok(Data {})
+            })
+        })
+        .build();
+
     let mut client = Client::builder(token, intents)
-        .event_handler(Handler)
+        .framework(framework)
         .await
         .expect("Failed to create client");
 
