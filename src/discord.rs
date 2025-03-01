@@ -20,6 +20,7 @@ use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::{Client, Context, EventHandler, GatewayIntents};
+use serenity::{Error, Result};
 use tracing::{error, info};
 
 struct Handler;
@@ -27,15 +28,41 @@ struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
-        if msg.content == "!ping" {
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
-                error!("Error sending message: {why:?}");
-            }
+        if let Err(why) = self.parse(ctx, msg).await {
+            error!("Failed to parse message: {why:?}");
         }
     }
 
     async fn ready(&self, _: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
+    }
+}
+
+impl Handler {
+    async fn parse(&self, ctx: Context, msg: Message) -> Result<(), Error> {
+        let author = msg.author.display_name();
+
+        match msg.content.as_str() {
+            "!join" => {
+                info!("{author} invoked the join command.");
+                msg.channel_id
+                    .say(&ctx.http, "Joining voice channel.")
+                    .await?;
+            }
+            "!leave" => {
+                info!("{author} invoked the leave command.");
+                msg.channel_id
+                    .say(&ctx.http, "Leaving voice channel.")
+                    .await?;
+            }
+            "!ping" => {
+                info!("{author} invoked the ping command.");
+                msg.channel_id.say(&ctx.http, "Pong!").await?;
+            }
+            _ => {}
+        }
+
+        Ok(())
     }
 }
 
