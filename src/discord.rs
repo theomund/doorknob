@@ -27,6 +27,13 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[poise::command(slash_command, prefix_command)]
+async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Deafening myself.").await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
 async fn join(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply("Joining voice channel.").await?;
 
@@ -41,8 +48,29 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(slash_command, prefix_command)]
+async fn mute(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Muting myself.").await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply("Pong!").await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
+async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Undeafening myself.").await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
+async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.reply("Unmuting myself.").await?;
 
     Ok(())
 }
@@ -56,19 +84,36 @@ pub async fn init() {
 
     let framework = Framework::builder()
         .options(FrameworkOptions {
-            commands: vec![join(), leave(), ping()],
-            prefix_options: PrefixFrameworkOptions {
-                prefix: Some("!".into()),
-                ..Default::default()
-            },
-            pre_command: |ctx| {
+            commands: vec![
+                deafen(),
+                join(),
+                leave(),
+                mute(),
+                ping(),
+                undeafen(),
+                unmute(),
+            ],
+            post_command: |ctx| {
                 Box::pin(async move {
                     info!(
-                        "{} has invoked the {} command.",
+                        "Finished processing {}'s {} command.",
                         ctx.author().display_name(),
                         ctx.command().qualified_name
                     );
                 })
+            },
+            pre_command: |ctx| {
+                Box::pin(async move {
+                    info!(
+                        "Started processing {}'s {} command.",
+                        ctx.author().display_name(),
+                        ctx.command().qualified_name
+                    );
+                })
+            },
+            prefix_options: PrefixFrameworkOptions {
+                prefix: Some("!".into()),
+                ..Default::default()
             },
             ..Default::default()
         })
