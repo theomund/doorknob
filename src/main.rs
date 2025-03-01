@@ -14,11 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#![warn(clippy::pedantic)]
+
 mod discord;
 mod logging;
 
 #[tokio::main]
 async fn main() {
-    logging::init().await;
+    logging::init();
     discord::init().await;
 }
