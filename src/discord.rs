@@ -16,7 +16,7 @@
 
 use std::env;
 
-use poise::{CreateReply, Framework, FrameworkOptions, PrefixFrameworkOptions};
+use poise::{CreateReply, Framework, FrameworkOptions, PrefixFrameworkOptions, builtins};
 use serenity::all::{Client, CreateAttachment, GatewayIntents, async_trait};
 use songbird::{Event, EventContext, EventHandler, SerenityInit, TrackEvent};
 use tracing::{error, info};
@@ -48,6 +48,7 @@ impl EventHandler for TrackEventNotifier {
     }
 }
 
+/// Chat with the bot by providing a message.
 #[poise::command(slash_command, prefix_command)]
 async fn chat(ctx: Context<'_>, message: String) -> Result<(), Error> {
     let mut session = SESSION.lock().await;
@@ -58,6 +59,7 @@ async fn chat(ctx: Context<'_>, message: String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Deafen the bot within the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
@@ -86,6 +88,20 @@ async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Display this help menu.
+#[poise::command(slash_command, prefix_command)]
+async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error> {
+    builtins::help(
+        ctx,
+        command.as_deref(),
+        builtins::HelpConfiguration::default(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Generate an image by providing a message.
 #[poise::command(slash_command, prefix_command)]
 async fn image(ctx: Context<'_>, message: String) -> Result<(), Error> {
     let session = SESSION.lock().await;
@@ -99,6 +115,7 @@ async fn image(ctx: Context<'_>, message: String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Have the bot join the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn join(ctx: Context<'_>) -> Result<(), Error> {
     let (channel_id, guild_id) = {
@@ -133,6 +150,7 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Have the bot leave the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn leave(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
@@ -155,6 +173,7 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Mute the bot within the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn mute(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
@@ -183,6 +202,7 @@ async fn mute(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Provide a simple diagnostic response.
 #[poise::command(slash_command, prefix_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply("Pong!").await?;
@@ -190,6 +210,7 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Generate speech by providing a message.
 #[poise::command(slash_command, prefix_command)]
 async fn tts(ctx: Context<'_>, message: String) -> Result<(), Error> {
     let session = SESSION.lock().await;
@@ -203,6 +224,7 @@ async fn tts(ctx: Context<'_>, message: String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Undeafen the bot within the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
@@ -231,6 +253,7 @@ async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Unmute the bot within the voice call.
 #[poise::command(slash_command, prefix_command)]
 async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
@@ -269,6 +292,7 @@ pub async fn init() {
             commands: vec![
                 chat(),
                 deafen(),
+                help(),
                 image(),
                 join(),
                 leave(),
