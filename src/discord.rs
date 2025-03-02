@@ -191,6 +191,19 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(slash_command, prefix_command)]
+async fn tts(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let session = SESSION.lock().await;
+    let response = session.tts(message).await?;
+
+    let attachment = CreateAttachment::path(response).await?;
+    let reply = CreateReply::default().attachment(attachment);
+
+    ctx.send(reply).await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().expect("Failed to retrieve guild ID");
 
@@ -261,6 +274,7 @@ pub async fn init() {
                 leave(),
                 mute(),
                 ping(),
+                tts(),
                 undeafen(),
                 unmute(),
             ],

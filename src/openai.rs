@@ -22,7 +22,8 @@ use async_openai::config::OpenAIConfig;
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
     ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs, CreateImageRequestArgs,
-    ImageModel, ImageResponseFormat, ImageSize,
+    CreateSpeechRequestArgs, ImageModel, ImageResponseFormat, ImageSize, SpeechModel,
+    SpeechResponseFormat, Voice,
 };
 use tokio::sync::Mutex;
 
@@ -65,8 +66,8 @@ impl Session {
 
         let request = CreateChatCompletionRequestArgs::default()
             .max_completion_tokens(512u32)
-            .model("gpt-4o")
             .messages(self.context.clone())
+            .model("gpt-4o")
             .build()?;
 
         let response = self.client.chat().create(request).await?;
@@ -85,8 +86,8 @@ impl Session {
     pub async fn image(&self, prompt: String) -> Result<String, Error> {
         let request = CreateImageRequestArgs::default()
             .model(ImageModel::DallE3)
-            .prompt(prompt)
             .n(1)
+            .prompt(prompt)
             .response_format(ImageResponseFormat::Url)
             .size(ImageSize::S1024x1024)
             .user("Doorknob")
@@ -101,6 +102,23 @@ impl Session {
             .expect("Failed to retrieve image path")
             .display()
             .to_string();
+
+        Ok(path)
+    }
+
+    pub async fn tts(&self, prompt: String) -> Result<String, Error> {
+        let request = CreateSpeechRequestArgs::default()
+            .input(prompt)
+            .model(SpeechModel::Tts1Hd)
+            .response_format(SpeechResponseFormat::Opus)
+            .voice(Voice::Fable)
+            .build()?;
+
+        let response = self.client.audio().speech(request).await?;
+
+        let path = String::from("./target/data/audio.opus");
+
+        response.save(path.clone()).await?;
 
         Ok(path)
     }
