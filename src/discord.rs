@@ -22,9 +22,11 @@ use serenity::prelude::{Client, GatewayIntents};
 use songbird::{Event, EventContext, EventHandler, SerenityInit, TrackEvent};
 use tracing::{error, info};
 
+use crate::openai;
+
 struct Data;
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
 type Context<'a> = poise::Context<'a, Data, Error>;
 
@@ -45,6 +47,15 @@ impl EventHandler for TrackEventNotifier {
 
         None
     }
+}
+
+#[poise::command(slash_command, prefix_command)]
+async fn chat(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let response = openai::chat(message.as_str()).await?;
+
+    ctx.reply(response).await?;
+
+    Ok(())
 }
 
 #[poise::command(slash_command, prefix_command)]
@@ -230,6 +241,7 @@ pub async fn init() {
     let framework = Framework::builder()
         .options(FrameworkOptions {
             commands: vec![
+                chat(),
                 deafen(),
                 join(),
                 leave(),
