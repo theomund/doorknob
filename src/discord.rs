@@ -16,13 +16,12 @@
 
 use std::env;
 
-use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
-use serenity::async_trait;
-use serenity::prelude::{Client, GatewayIntents};
+use poise::{CreateReply, Framework, FrameworkOptions, PrefixFrameworkOptions};
+use serenity::all::{Client, CreateAttachment, GatewayIntents, async_trait};
 use songbird::{Event, EventContext, EventHandler, SerenityInit, TrackEvent};
 use tracing::{error, info};
 
-use crate::openai;
+use crate::openai::SESSION;
 
 struct Data;
 
@@ -51,7 +50,8 @@ impl EventHandler for TrackEventNotifier {
 
 #[poise::command(slash_command, prefix_command)]
 async fn chat(ctx: Context<'_>, message: String) -> Result<(), Error> {
-    let response = openai::chat(message.as_str()).await?;
+    let mut session = SESSION.lock().await;
+    let response = session.chat(message).await?;
 
     ctx.reply(response).await?;
 
@@ -82,6 +82,19 @@ async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
 
         ctx.reply("I'm now deafened.").await?;
     }
+
+    Ok(())
+}
+
+#[poise::command(slash_command, prefix_command)]
+async fn image(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let session = SESSION.lock().await;
+    let response = session.image(message).await?;
+
+    let attachment = CreateAttachment::path(response).await?;
+    let reply = CreateReply::default().attachment(attachment);
+
+    ctx.send(reply).await?;
 
     Ok(())
 }
@@ -243,6 +256,7 @@ pub async fn init() {
             commands: vec![
                 chat(),
                 deafen(),
+                image(),
                 join(),
                 leave(),
                 mute(),

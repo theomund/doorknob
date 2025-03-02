@@ -15,18 +15,20 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::env;
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 
 use async_openai::Client;
 use async_openai::config::OpenAIConfig;
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
-    ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
+    ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs, CreateImageRequestArgs,
+    ImageModel, ImageResponseFormat, ImageSize,
 };
+use tokio::sync::Mutex;
 
 use crate::discord::Error;
 
-struct Session {
+pub struct Session {
     client: Client<OpenAIConfig>,
     context: Vec<ChatCompletionRequestMessage>,
 }
@@ -48,7 +50,7 @@ impl Session {
         Self { client, context }
     }
 
-    pub fn append(&mut self, content: &str) -> Result<(), Error> {
+    fn append(&mut self, content: String) -> Result<(), Error> {
         let message = ChatCompletionRequestUserMessageArgs::default()
             .content(content)
             .build()?;
@@ -58,43 +60,50 @@ impl Session {
         Ok(())
     }
 
-    pub fn client(&self) -> &Client<OpenAIConfig> {
-        &self.client
+    pub async fn chat(&mut self, prompt: String) -> Result<String, Error> {
+        self.append(prompt)?;
+
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_completion_tokens(512u32)
+            .model("gpt-4o")
+            .messages(self.context.clone())
+            .build()?;
+
+        let response = self.client.chat().create(request).await?;
+
+        let choice = response.choices.first().expect("Failed to retrieve choice");
+
+        let message = choice
+            .message
+            .content
+            .clone()
+            .expect("Failed to retrieve message");
+
+        Ok(message)
     }
 
-    pub fn context(&self) -> &Vec<ChatCompletionRequestMessage> {
-        &self.context
+    pub async fn image(&self, prompt: String) -> Result<String, Error> {
+        let request = CreateImageRequestArgs::default()
+            .model(ImageModel::DallE3)
+            .prompt(prompt)
+            .n(1)
+            .response_format(ImageResponseFormat::Url)
+            .size(ImageSize::S1024x1024)
+            .user("Doorknob")
+            .build()?;
+
+        let response = self.client.images().create(request).await?;
+
+        let paths = response.save("./target/data").await?;
+
+        let path = paths
+            .first()
+            .expect("Failed to retrieve image path")
+            .display()
+            .to_string();
+
+        Ok(path)
     }
 }
 
-static SESSION: LazyLock<Mutex<Session>> = LazyLock::new(|| Mutex::new(Session::new()));
-
-pub async fn chat(prompt: &str) -> Result<String, Error> {
-    let (client, context) = {
-        let mut session = SESSION.lock().expect("Failed to get lock");
-        session.append(prompt)?;
-
-        let client = session.client().clone();
-        let context = session.context().clone();
-
-        (client, context)
-    };
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_completion_tokens(512u32)
-        .model("gpt-4o")
-        .messages(context)
-        .build()?;
-
-    let response = client.chat().create(request).await?;
-
-    let choice = response.choices.first().expect("Failed to retrieve choice");
-
-    let message = choice
-        .message
-        .content
-        .clone()
-        .expect("Failed to retrieve message");
-
-    Ok(message)
-}
+pub static SESSION: LazyLock<Mutex<Session>> = LazyLock::new(|| Mutex::new(Session::new()));
