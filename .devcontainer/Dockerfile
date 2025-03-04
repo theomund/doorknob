@@ -18,7 +18,7 @@ FROM quay.io/fedora/fedora:41
 RUN dnf copr enable -y mczernek/vale 
 RUN dnf install -y \
     bash-completion-2.16 \
-    cmake-3.30.7 \
+    cmake-3.30.8 \
     gcc-14.2.1 \
     git-2.48.1 \
     gnupg2-2.4.5 \
