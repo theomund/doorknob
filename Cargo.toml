@@ -14,21 +14,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-FROM quay.io/fedora/fedora:41
-RUN dnf copr enable -y mczernek/vale
-RUN dnf install -y \
-    bash-completion-2.16 \
-    cmake-3.30.8 \
-    gcc-14.2.1 \
-    git-2.48.1 \
-    gnupg2-2.4.5 \
-    just-1.39.0 \
-    lldb-19.1.7 \
-    opus-1.5.2 \
-    rustup-1.27.1 \
-    vale-3.9.6 \
-    yamllint-1.35.1 \
-    && dnf clean all
-RUN useradd -m developer
-USER developer
-RUN rustup-init -y --default-toolchain 1.85.0
+[package]
+name = "doorknob"
+authors = ["Theomund <34360334+theomund@users.noreply.github.com>"]
+edition = "2024"
+license = "AGPL-3.0-or-later"
+version = "0.1.0"
+
+[dependencies]
+anyhow = "1.0.97"
+poise = "0.6.1"
+serenity = "0.12.4"
+songbird = "0.5.0"
+tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"

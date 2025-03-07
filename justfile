@@ -14,23 +14,41 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+set dotenv-load := true
+
 # Run all CI/CD stages.
 all: lint test build
 
 # Build the project.
 build:
-    @echo "To be implemented."
+    cargo build
 
 # Clean the project.
 clean:
-    git clean -fdx
+    cargo clean
+
+# Run the Rust linter
+clippy:
+    cargo clippy
+
+# Run the debugger.
+debug:
+    lldb target/debug/doorknob
+
+# Run the formatter.
+format:
+    cargo fmt
 
 # Run the project linters.
-lint: vale yamllint
+lint: clippy vale yamllint
+
+# Run the project.
+run:
+    cargo run
 
 # Run the test suite.
 test:
-    @echo "To be implemented."
+    cargo test
 
 # Run the prose linter.
 vale:
