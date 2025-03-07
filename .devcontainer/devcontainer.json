@@ -1,0 +1,21 @@
+{
+    "name": "doorknob",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.vscode-github-actions",
+                "ms-azuretools.vscode-docker",
+                "nefrob.vscode-just-syntax",
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "vadimcn.vscode-lldb"
+            ]
+        }
+    },
+    "securityOpt": [
+        "label=disable"
+    ]
+}
