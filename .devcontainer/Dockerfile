@@ -23,6 +23,7 @@ RUN dnf install -y \
     gnupg2-2.4.5 \
     just-1.39.0 \
     lldb-19.1.7 \
+    opus-devel-1.5.2 \
     rustup-1.27.1 \
     vale-3.9.6 \
     yamllint-1.35.1 \
