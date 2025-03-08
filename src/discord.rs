@@ -15,7 +15,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::{
-    env,
+    env, fs,
+    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -25,20 +26,28 @@ use std::{
 
 use anyhow::Error;
 use dashmap::DashMap;
-use poise::{Command, Framework, FrameworkOptions, builtins};
-use serenity::all::{Client, GatewayIntents, GuildId, async_trait};
+use hound::{SampleFormat, WavSpec, WavWriter};
+use poise::{Command, CreateReply, Framework, FrameworkOptions, builtins};
+use serenity::all::{Client, CreateAttachment, GatewayIntents, GuildId, async_trait};
 use songbird::{
-    Config, CoreEvent, Event, EventContext, EventHandler, SerenityInit, TrackEvent,
+    Config, CoreEvent, Event, EventContext, EventHandler, SerenityInit, Songbird, TrackEvent,
     driver::DecodeMode,
+    events::context_data::{RtcpData, RtpData, VoiceTick},
+    input::{File, Input},
     model::{
+        SpeakingState,
         id::UserId,
         payload::{ClientDisconnect, Speaking},
     },
     packet::Packet,
+    tracks::{TrackHandle, TrackState},
 };
 use tracing::{error, info, warn};
 
+use crate::openai::SESSION;
+
 struct Data;
+
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[derive(Clone)]
@@ -47,18 +56,158 @@ struct Receiver {
 }
 
 struct InnerReceiver {
+    guild_id: GuildId,
     last_tick_was_empty: AtomicBool,
+    manager: Arc<Songbird>,
     known_ssrcs: DashMap<u32, UserId>,
+    spec: WavSpec,
+    voice_samples: DashMap<u32, Vec<i16>>,
 }
 
 impl Receiver {
-    pub fn new() -> Self {
+    pub fn new(guild_id: GuildId, manager: Arc<Songbird>) -> Self {
         Self {
             inner: Arc::new(InnerReceiver {
+                guild_id,
                 last_tick_was_empty: AtomicBool::default(),
                 known_ssrcs: DashMap::new(),
+                manager,
+                spec: WavSpec {
+                    bits_per_sample: 16,
+                    channels: 2,
+                    sample_format: SampleFormat::Int,
+                    sample_rate: 44100,
+                },
+                voice_samples: DashMap::new(),
             }),
         }
+    }
+
+    fn client_disconnect_handler(user_id: UserId) {
+        info!("Client disconnected: user {user_id:?}.");
+    }
+
+    fn rtcp_packet_handler(data: &RtcpData) {
+        info!("RTCP packet received: {:?}.", data.packet);
+    }
+
+    fn rtp_packet_handler(packet: &RtpData) {
+        let rtp = packet.rtp();
+        info!(
+            "Received voice packet from SSRC {}, sequence {}, timestamp {}, -- {}B long.",
+            rtp.get_ssrc(),
+            rtp.get_sequence().0,
+            rtp.get_timestamp().0,
+            rtp.payload().len()
+        );
+    }
+
+    fn speaking_state_update_handler(
+        &self,
+        speaking: SpeakingState,
+        ssrc: u32,
+        user_id: Option<&UserId>,
+    ) {
+        info!("Speaking state update: user {user_id:?} has SSRC {ssrc:?}, using {speaking:?}.");
+
+        if let Some(user) = user_id {
+            self.inner.known_ssrcs.insert(ssrc, *user);
+            self.inner.voice_samples.insert(ssrc, vec![]);
+        }
+    }
+
+    fn track_handler(track_list: &&[(&TrackState, &TrackHandle)]) {
+        for (state, handle) in *track_list {
+            error!(
+                "Track {:?} encountered an error: {:?}.",
+                handle.uuid(),
+                state.playing
+            );
+        }
+    }
+
+    async fn voice_tick_handler(&self, tick: &VoiceTick) -> Result<(), Error> {
+        let speaking = tick.speaking.len();
+        let total_participants = speaking + tick.silent.len();
+        let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
+
+        if speaking == 0 && !last_tick_was_empty {
+            info!("There are currently no speakers.");
+
+            fs::create_dir_all("./target/data")?;
+
+            for mut samples in self.inner.voice_samples.iter_mut() {
+                let path = PathBuf::from("./target/data/transcribe.wav");
+
+                let mut writer = WavWriter::create(path.clone(), self.inner.spec)?;
+
+                for sample in samples.iter() {
+                    writer.write_sample(*sample)?;
+                }
+
+                writer.finalize()?;
+
+                let mut session = SESSION.lock().await;
+
+                let transcription = session.transcribe(path).await?;
+                let response = session.chat(transcription).await?;
+                let audio = session.speech(response).await?;
+
+                let handler_lock = self.inner.manager.get(self.inner.guild_id).unwrap();
+                let mut handler = handler_lock.lock().await;
+
+                let file = File::new(audio);
+                let input = Input::from(file);
+
+                handler.play_input(input);
+
+                samples.clear();
+            }
+
+            self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
+        } else if speaking != 0 {
+            self.inner
+                .last_tick_was_empty
+                .store(false, Ordering::SeqCst);
+
+            info!("Voice tick ({speaking}/{total_participants} live):");
+
+            for (ssrc, data) in &tick.speaking {
+                let user_id = if let Some(id) = self.inner.known_ssrcs.get(ssrc) {
+                    format!("{:?}", *id)
+                } else {
+                    "?".into()
+                };
+
+                if let Some(decoded_voice) = data.decoded_voice.as_ref() {
+                    if let Some(mut samples) = self.inner.voice_samples.get_mut(ssrc) {
+                        samples.extend(decoded_voice);
+                    }
+
+                    let voice_length = decoded_voice.len();
+
+                    let audio = format!(
+                        "first samples from {voice_length}: {:?}",
+                        &decoded_voice[..voice_length.min(5)]
+                    );
+
+                    if let Some(packet) = &data.packet {
+                        let rtp = packet.rtp();
+                        info!(
+                            "\t{ssrc}/{user_id}: packet seq {} ts {} -- {audio}",
+                            rtp.get_sequence().0,
+                            rtp.get_timestamp().0
+                        );
+                    } else {
+                        warn!("\t{ssrc}/{user_id}: Missed packet -- {audio}");
+                    }
+                } else {
+                    warn!("\t{ssrc}/{user_id}: Decode disabled.");
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -67,94 +216,19 @@ impl EventHandler for Receiver {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         match ctx {
             EventContext::ClientDisconnect(ClientDisconnect { user_id, .. }) => {
-                info!("Client disconnected: user {user_id:?}.");
+                Receiver::client_disconnect_handler(*user_id);
             }
-            EventContext::RtcpPacket(data) => {
-                info!("RTCP packet received: {:?}.", data.packet);
-            }
-            EventContext::RtpPacket(packet) => {
-                let rtp = packet.rtp();
-                info!(
-                    "Received voice packet from SSRC {}, sequence {}, timestamp {}, -- {}B long.",
-                    rtp.get_ssrc(),
-                    rtp.get_sequence().0,
-                    rtp.get_timestamp().0,
-                    rtp.payload().len()
-                );
-            }
+            EventContext::RtcpPacket(data) => Receiver::rtcp_packet_handler(data),
+            EventContext::RtpPacket(packet) => Receiver::rtp_packet_handler(packet),
             EventContext::SpeakingStateUpdate(Speaking {
                 speaking,
                 ssrc,
                 user_id,
                 ..
-            }) => {
-                info!(
-                    "Speaking state update: user {user_id:?} has SSRC {ssrc:?}, using {speaking:?}."
-                );
-
-                if let Some(user) = user_id {
-                    self.inner.known_ssrcs.insert(*ssrc, *user);
-                }
-            }
-            EventContext::Track(track_list) => {
-                for (state, handle) in *track_list {
-                    error!(
-                        "Track {:?} encountered an error: {:?}.",
-                        handle.uuid(),
-                        state.playing
-                    );
-                }
-            }
-            EventContext::VoiceTick(tick) => {
-                let speaking = tick.speaking.len();
-                let total_participants = speaking + tick.silent.len();
-                let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
-
-                if speaking == 0 && !last_tick_was_empty {
-                    info!("There are currently no speakers.");
-
-                    self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
-                } else if speaking != 0 {
-                    self.inner
-                        .last_tick_was_empty
-                        .store(false, Ordering::SeqCst);
-
-                    info!("Voice tick ({speaking}/{total_participants} live):");
-
-                    for (ssrc, data) in &tick.speaking {
-                        let user_id = if let Some(id) = self.inner.known_ssrcs.get(ssrc) {
-                            format!("{:?}", *id)
-                        } else {
-                            "?".into()
-                        };
-
-                        if let Some(decoded_voice) = data.decoded_voice.as_ref() {
-                            let voice_length = decoded_voice.len();
-
-                            let audio = format!(
-                                "first samples from {voice_length}: {:?}",
-                                &decoded_voice[..voice_length.min(5)]
-                            );
-
-                            if let Some(packet) = &data.packet {
-                                let rtp = packet.rtp();
-                                info!(
-                                    "\t{ssrc}/{user_id}: packet seq {} ts {} -- {audio}",
-                                    rtp.get_sequence().0,
-                                    rtp.get_timestamp().0
-                                );
-                            } else {
-                                warn!("\t{ssrc}/{user_id}: Missed packet -- {audio}");
-                            }
-                        } else {
-                            warn!("\t{ssrc}/{user_id}: Decode disabled.");
-                        }
-                    }
-                }
-            }
-            _ => {
-                unimplemented!();
-            }
+            }) => self.speaking_state_update_handler(*speaking, *ssrc, user_id.as_ref()),
+            EventContext::Track(track_list) => Receiver::track_handler(track_list),
+            EventContext::VoiceTick(tick) => self.voice_tick_handler(tick).await.unwrap(),
+            _ => unimplemented!(),
         }
 
         None
@@ -163,8 +237,14 @@ impl EventHandler for Receiver {
 
 /// Chat with the bot.
 #[poise::command(slash_command)]
-async fn chat(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("*Doorknob is now responding.*").await?;
+async fn chat(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let mut session = SESSION.lock().await;
+
+    ctx.defer().await?;
+
+    let response = session.chat(message).await?;
+
+    ctx.reply(response).await?;
 
     Ok(())
 }
@@ -210,8 +290,17 @@ async fn help(
 
 /// Generate an image.
 #[poise::command(slash_command)]
-async fn image(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("*Doorknob is now generating an image.*").await?;
+async fn image(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let session = SESSION.lock().await;
+
+    ctx.defer().await?;
+
+    let response = session.image(message).await?;
+
+    let attachment = CreateAttachment::path(response).await?;
+    let reply = CreateReply::default().attachment(attachment);
+
+    ctx.send(reply).await?;
 
     Ok(())
 }
@@ -244,7 +333,7 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
         let handler_lock = manager.get_or_insert(guild_id);
         let mut handler = handler_lock.lock().await;
 
-        let receiver = Receiver::new();
+        let receiver = Receiver::new(guild_id, manager.clone());
 
         handler.add_global_event(CoreEvent::ClientDisconnect.into(), receiver.clone());
         handler.add_global_event(CoreEvent::RtcpPacket.into(), receiver.clone());
@@ -320,8 +409,17 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 
 /// Transform text into speech.
 #[poise::command(slash_command)]
-async fn speech(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("*Doorknob is now generating speech.*").await?;
+async fn speech(ctx: Context<'_>, message: String) -> Result<(), Error> {
+    let session = SESSION.lock().await;
+
+    ctx.defer().await?;
+
+    let response = session.speech(message).await?;
+
+    let attachment = CreateAttachment::path(response).await?;
+    let reply = CreateReply::default().attachment(attachment);
+
+    ctx.send(reply).await?;
 
     Ok(())
 }
@@ -329,7 +427,14 @@ async fn speech(ctx: Context<'_>) -> Result<(), Error> {
 /// Transform speech into text.
 #[poise::command(slash_command)]
 async fn transcribe(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("*Doorknob is now transcribing speech.*").await?;
+    let session = SESSION.lock().await;
+
+    ctx.defer().await?;
+
+    let path = PathBuf::from("./target/data/speech.wav");
+    let response = session.transcribe(path).await?;
+
+    ctx.reply(response).await?;
 
     Ok(())
 }
@@ -382,6 +487,20 @@ async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Describe image into text.
+#[poise::command(slash_command)]
+async fn vision(ctx: Context<'_>, url: String) -> Result<(), Error> {
+    let mut session = SESSION.lock().await;
+
+    ctx.defer().await?;
+
+    let response = session.vision(url).await?;
+
+    ctx.reply(response).await?;
+
+    Ok(())
+}
+
 pub async fn init() -> Result<(), Error> {
     info!("Starting the Discord module.");
 
@@ -399,6 +518,7 @@ pub async fn init() -> Result<(), Error> {
             transcribe(),
             undeafen(),
             unmute(),
+            vision(),
         ],
         post_command: |ctx| {
             Box::pin(async move {
@@ -438,7 +558,9 @@ pub async fn init() -> Result<(), Error> {
 
                 builtins::register_in_guild(ctx, &framework.options().commands, guild_id).await?;
 
-                Ok(Data {})
+                let data = Data {};
+
+                Ok(data)
             })
         })
         .options(options)
