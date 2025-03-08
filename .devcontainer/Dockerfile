@@ -18,13 +18,12 @@ FROM quay.io/fedora/fedora:41
 RUN dnf copr enable -y mczernek/vale
 RUN dnf install -y \
     bash-completion-2.16 \
-    cmake-3.30.8 \
     gcc-14.2.1 \
     git-2.48.1 \
     gnupg2-2.4.5 \
     just-1.39.0 \
     lldb-19.1.7 \
-    opus-1.5.2 \
+    opus-devel-1.5.2 \
     rustup-1.27.1 \
     vale-3.9.6 \
     yamllint-1.35.1 \
