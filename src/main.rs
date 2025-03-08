@@ -18,6 +18,7 @@
 
 mod discord;
 mod logging;
+mod openai;
 
 #[tokio::main]
 async fn main() {

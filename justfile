@@ -43,8 +43,8 @@ format:
 lint: clippy vale yamllint
 
 # Run the project.
-run:
-    cargo run
+run profile="dev":
+    cargo run --profile {{ profile }}
 
 # Run the test suite.
 test:
