@@ -36,4 +36,6 @@ jobs:
           imageName: ghcr.io/theomund/doorknob/development
           cacheFrom: ghcr.io/theomund/doorknob/development
           push: always
-          runCmd: mise run all
+          runCmd: |
+            mise trust
+            mise run all
