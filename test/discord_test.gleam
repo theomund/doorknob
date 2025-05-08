@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleeunit
+import discord/api
+import envoy
+import gleeunit/should
 
-pub fn main() -> Nil {
-  gleeunit.main()
+pub fn token_test() {
+  envoy.set("DISCORD_TOKEN", "abcdef")
+  api.token() |> should.equal("abcdef")
 }

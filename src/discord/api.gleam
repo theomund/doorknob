@@ -14,8 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleeunit
+import envoy
+import gleam/result
 
-pub fn main() -> Nil {
-  gleeunit.main()
+pub fn token() {
+  envoy.get("DISCORD_TOKEN") |> result.unwrap("")
 }
