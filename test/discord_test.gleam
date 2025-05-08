@@ -18,7 +18,7 @@ import discord/api
 import envoy
 import gleeunit/should
 
-pub fn token_test() {
+pub fn token_test() -> Nil {
   envoy.set("DISCORD_TOKEN", "abcdef")
   api.token() |> should.equal("abcdef")
 }
