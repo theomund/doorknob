@@ -1,0 +1,87 @@
+# Doorknob - Artificial intelligence companion written in Gleam.
+# Copyright (C) 2025 Theomund
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+[tasks.all]
+depends = ["setup", "lint", "build", "test"]
+description = "Run all CI/CD stages."
+
+[tasks.build]
+depends = ["build-gleam"]
+description = "Build the project."
+
+[tasks.build-gleam]
+description = "Build the Gleam source code."
+run = "gleam build"
+
+[tasks.clean]
+depends = ["clean-gleam", "clean-vale"]
+description = "Clean the project."
+
+[tasks.clean-gleam]
+description = "Clean the Gleam build files."
+run = "gleam clean"
+
+[tasks.clean-vale]
+description = "Clean the Vale style files."
+run = "rm -rf .vale"
+
+[tasks.format]
+depends = ["format-gleam"]
+description = "Format the project."
+
+[tasks.format-gleam]
+description = "Format the Gleam source code."
+run = "gleam format"
+
+[tasks.lint]
+depends = "lint-vale"
+description = "Lint the project."
+
+[tasks.lint-vale]
+depends = ["setup"]
+description = "Run the Vale linter."
+run = "vale README.md"
+
+[tasks.run]
+depends = ["run-gleam"]
+description = "Run the project."
+
+[tasks.run-gleam]
+description = "Run the Gleam source code."
+run = "gleam run"
+
+[tasks.setup]
+depends = ["setup-vale"]
+description = "Setup the project."
+
+[tasks.setup-vale]
+description = "Setup the Vale linter."
+outputs = [".vale/styles/RedHat"]
+run = "vale sync"
+sources = [".vale.ini"]
+
+[tasks.test]
+depends = ["test-gleam"]
+description = "Test the project."
+
+[tasks.test-gleam]
+description = "Test the Gleam source code."
+run = "gleam test"
+
+[tools]
+erlang = "27.3.3"
+gleam = "1.10.0"
+vale = "3.11.2"

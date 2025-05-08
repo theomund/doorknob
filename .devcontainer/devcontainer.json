@@ -1,0 +1,19 @@
+{
+    "name": "doorknob",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.vscode-github-actions",
+                "gleam.gleam",
+                "ms-azuretools.vscode-docker",
+                "tamasfe.even-better-toml"
+            ]
+        }
+    },
+    "securityOpt": [
+        "label=disable"
+    ]
+}
