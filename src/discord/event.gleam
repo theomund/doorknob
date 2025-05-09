@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import console
-import discord/gateway
-import slog
+pub type State {
+  State(initialized: Bool, s: Int)
+}
 
-pub fn main() -> Nil {
-  slog.setup()
-  console.title()
-  gateway.start()
+pub type HelloData {
+  HelloData(heartbeat_interval: Int)
+}
+
+pub type Hello {
+  Hello(op: Int, d: HelloData)
 }
