@@ -28,11 +28,11 @@ pub type Event {
 pub fn from_string(encoded: String) -> Event {
   let decoder = {
     use op <- decode.field("op", decode.int)
-    use d <- decode.field("d", {
-      use heartbeat_interval <- decode.field("heartbeat_interval", decode.int)
-      decode.success(Data(heartbeat_interval:))
-    })
-    decode.success(Event(op:, d:))
+    use heartbeat_interval <- decode.subfield(
+      ["d", "heartbeat_interval"],
+      decode.int,
+    )
+    decode.success(Event(op:, d: Data(heartbeat_interval:)))
   }
 
   let assert Ok(event) = json.parse(from: encoded, using: decoder)
