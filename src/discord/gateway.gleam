@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import discord/event.{State}
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
@@ -24,6 +23,10 @@ import gleam/otp/actor
 import gleam/string
 import logging.{Debug, Error, Info}
 import stratus
+
+pub type State {
+  State(initialized: Bool, s: Int)
+}
 
 pub fn start() -> Nil {
   logging.log(Info, "Starting Discord Gateway API listener")

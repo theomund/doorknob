@@ -14,14 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub type State {
-  State(initialized: Bool, s: Int)
+import gleam/dynamic/decode
+import gleam/json
+
+pub type Data {
+  Data(heartbeat_interval: Int)
 }
 
-pub type HelloData {
-  HelloData(heartbeat_interval: Int)
+pub type Event {
+  Event(op: Int, d: Data)
 }
 
-pub type Hello {
-  Hello(op: Int, d: HelloData)
+pub fn from_string(encoded: String) -> Event {
+  let decoder = {
+    use op <- decode.field("op", decode.int)
+    use d <- decode.field("d", {
+      use heartbeat_interval <- decode.field("heartbeat_interval", decode.int)
+      decode.success(Data(heartbeat_interval:))
+    })
+    decode.success(Event(op:, d:))
+  }
+
+  let assert Ok(event) = json.parse(from: encoded, using: decoder)
+
+  event
 }
