@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import discord/event/hello
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
@@ -59,8 +60,22 @@ pub fn start() -> Nil {
           stratus.Text(msg) -> {
             logging.log(Debug, "Received text message: " <> msg)
             case state.initialized {
-              False -> logging.log(Debug, "State is not initialized")
-              True -> logging.log(Debug, "State is initialized")
+              False -> {
+                logging.log(Debug, "State is not initialized")
+
+                let event = hello.from_string(msg)
+                let heartbeat_interval = hello.heartbeat_interval(event)
+
+                logging.log(
+                  Debug,
+                  "Received heartbeat interval of "
+                    <> heartbeat_interval
+                    <> "ms",
+                )
+              }
+              True -> {
+                logging.log(Debug, "State is initialized")
+              }
             }
             actor.continue(state)
           }

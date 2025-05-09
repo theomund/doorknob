@@ -14,33 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleam/dynamic/decode
-import gleam/int
-import gleam/json
-
-pub type Data {
-  Data(heartbeat_interval: Int)
-}
-
 pub type Event {
-  Event(op: Int, d: Data)
-}
-
-pub fn from_string(encoded: String) -> Event {
-  let decoder = {
-    use op <- decode.field("op", decode.int)
-    use heartbeat_interval <- decode.subfield(
-      ["d", "heartbeat_interval"],
-      decode.int,
-    )
-    decode.success(Event(op:, d: Data(heartbeat_interval:)))
-  }
-
-  let assert Ok(event) = json.parse(from: encoded, using: decoder)
-
-  event
-}
-
-pub fn heartbeat_interval(event: Event) -> String {
-  int.to_string(event.d.heartbeat_interval)
+  Event(op: Int)
 }
