@@ -87,4 +87,5 @@ run = "gleam test"
 [tools]
 erlang = "27.3.3"
 gleam = "1.10.0"
+rebar = "3.24.0"
 vale = "3.11.2"
