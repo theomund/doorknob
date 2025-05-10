@@ -15,7 +15,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import gleam/dynamic/decode
-import gleam/int
 import gleam/json
 
 pub type Data {
@@ -41,6 +40,6 @@ pub fn from_string(encoded: String) -> Event {
   event
 }
 
-pub fn heartbeat_interval(event: Event) -> String {
-  int.to_string(event.d.heartbeat_interval)
+pub fn heartbeat_interval(event: Event) -> Int {
+  event.d.heartbeat_interval
 }

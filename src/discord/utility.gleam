@@ -19,6 +19,6 @@ import gleam/result
 import logging.{Info}
 
 pub fn token() -> String {
-  logging.log(Info, "Fetching Discord authentication token")
+  logging.log(Info, "Fetching authentication token")
   envoy.get("DISCORD_TOKEN") |> result.unwrap("")
 }

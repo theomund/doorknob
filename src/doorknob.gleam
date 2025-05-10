@@ -16,10 +16,10 @@
 
 import console
 import discord/gateway
-import slog
+import loggers
 
 pub fn main() -> Nil {
-  slog.setup()
+  loggers.setup()
   console.title()
   gateway.start()
 }
