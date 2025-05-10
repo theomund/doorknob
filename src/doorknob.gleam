@@ -14,8 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleam/io
+import console
+import discord/gateway
+import loggers
 
 pub fn main() -> Nil {
-  io.println("Hello from Doorknob!")
+  loggers.setup()
+  console.title()
+  gateway.start()
 }

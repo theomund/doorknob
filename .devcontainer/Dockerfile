@@ -23,7 +23,7 @@ RUN dnf config-manager addrepo --from-repofile=https://mise.jdx.dev/rpm/mise.rep
     gcc-c++-15.1.1 \
     git-2.49.0 \
     gnupg2-2.4.7 \
-    mise-2025.5.2 \
+    mise-2025.5.3 \
     openssl-devel-3.2.4 \
     ncurses-devel-6.5 \
     procps-ng-4.0.4 \
@@ -31,4 +31,4 @@ RUN dnf config-manager addrepo --from-repofile=https://mise.jdx.dev/rpm/mise.rep
 RUN useradd -m developer
 USER developer
 ENV PATH="$PATH:/home/developer/.local/share/mise/shims"
-RUN mise install erlang@27.3.3 gleam@1.10.0 vale@3.11.2
+RUN mise install erlang@27.3.4 gleam@1.10.0 rebar@3.24.0 vale@3.11.2

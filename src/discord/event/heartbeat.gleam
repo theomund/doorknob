@@ -14,8 +14,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleeunit
+import gleam/json
 
-pub fn main() -> Nil {
-  gleeunit.main()
+pub type Event {
+  Event(op: Int, d: Int)
+}
+
+pub fn new(state: Int) -> Event {
+  Event(1, state)
+}
+
+pub fn to_string(event: Event) -> String {
+  json.to_string(
+    json.object([#("op", json.int(event.op)), #("d", json.int(event.d))]),
+  )
 }
