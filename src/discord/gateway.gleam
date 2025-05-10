@@ -17,6 +17,7 @@
 import discord/event/heartbeat
 import discord/event/hello
 import discord/event/identify
+import discord/event/unknown
 import discord/utility
 import gleam/bit_array
 import gleam/erlang/process
@@ -102,12 +103,25 @@ fn handle_text(
           logging.log(logging.Error, "Identify event was unsuccessfully sent")
       }
 
-      let state = State(initialized: True, s: state.s)
+      let new_state = State(initialized: True, s: state.s)
 
-      actor.continue(state)
+      actor.continue(new_state)
     }
     True -> {
-      actor.continue(state)
+      let event = unknown.from_string(msg)
+
+      logging.log(
+        logging.Warning,
+        "Received unhandled event: " <> string.inspect(event),
+      )
+
+      case unknown.sequence(event) {
+        option.None -> actor.continue(state)
+        option.Some(s) -> {
+          let new_state = State(initialized: state.initialized, s:)
+          actor.continue(new_state)
+        }
+      }
     }
   }
 }
