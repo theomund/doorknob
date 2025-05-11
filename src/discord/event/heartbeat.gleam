@@ -14,7 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import gleam/int
 import gleam/json
+import gleam/string
+import logging
+import stratus
 
 pub type Event {
   Event(op: Int, d: Int)
@@ -28,4 +32,29 @@ pub fn to_string(event: Event) -> String {
   json.to_string(
     json.object([#("op", json.int(event.op)), #("d", json.int(event.d))]),
   )
+}
+
+pub fn send(event: Event, conn: stratus.Connection, count: Int) -> Nil {
+  let response = to_string(event) |> stratus.send_text_message(conn, _)
+
+  let attempt = int.to_string(count + 1)
+
+  case response {
+    Ok(_) ->
+      logging.log(
+        logging.Info,
+        "Heartbeat event #"
+          <> attempt
+          <> " was successfully sent: "
+          <> string.inspect(event),
+      )
+    Error(_) ->
+      logging.log(
+        logging.Error,
+        "Heartbeat event #"
+          <> attempt
+          <> " was unsuccessfully sent: "
+          <> string.inspect(event),
+      )
+  }
 }

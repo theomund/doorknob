@@ -14,16 +14,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import discord/authentication
 import discord/event/heartbeat
 import discord/event/hello
 import discord/event/identify
 import discord/event/unknown
-import discord/utility
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
 import gleam/http/request
-import gleam/int
 import gleam/option
 import gleam/otp/actor
 import gleam/string
@@ -62,46 +61,18 @@ fn handle_text(
   case state.initialized {
     False -> {
       let heartbeat_interval =
-        msg |> hello.from_string() |> hello.heartbeat_interval()
-
-      let heartbeat_message =
-        state.s |> heartbeat.new() |> heartbeat.to_string()
+        hello.from_string(msg) |> hello.heartbeat_interval()
 
       process.start(
         fn() {
           repeatedly.call(heartbeat_interval, Nil, fn(_state, count) {
-            let response = stratus.send_text_message(conn, heartbeat_message)
-
-            let total = int.to_string(count + 1)
-
-            case response {
-              Ok(_) ->
-                logging.log(
-                  logging.Info,
-                  "Heartbeat event #" <> total <> " was successfully sent",
-                )
-              Error(_) ->
-                logging.log(
-                  logging.Error,
-                  "Heartbeat event #" <> total <> " was unsuccessfully sent",
-                )
-            }
+            heartbeat.new(state.s) |> heartbeat.send(conn, count)
           })
         },
         False,
       )
 
-      let identify_message =
-        utility.token() |> identify.new(513) |> identify.to_string()
-
-      let response = stratus.send_text_message(conn, identify_message)
-
-      case response {
-        Ok(_) ->
-          logging.log(logging.Info, "Identify event was successfully sent")
-        Error(_) ->
-          logging.log(logging.Error, "Identify event was unsuccessfully sent")
-      }
+      authentication.token() |> identify.new(513) |> identify.send(conn)
 
       let new_state = State(initialized: True, s: state.s)
 
@@ -151,7 +122,7 @@ fn on_close(state: State) -> Nil {
 }
 
 pub fn start() -> Nil {
-  logging.log(logging.Info, "Gateway process is starting")
+  logging.log(logging.Info, "Gateway process started")
 
   let assert Ok(req) =
     request.to("https://gateway.discord.gg?v=10&encoding=json")
