@@ -45,6 +45,7 @@ fn init() -> #(State, option.Option(process.Selector(String))) {
 fn handle_binary(msg: BitArray, state: State) -> actor.Next(String, State) {
   let assert Ok(content) = bit_array.to_string(msg)
 
+  logging.log(logging.Debug, "Current state: " <> string.inspect(state))
   logging.log(logging.Debug, "Received binary message: " <> content)
 
   actor.continue(state)
@@ -55,8 +56,8 @@ fn handle_text(
   state: State,
   conn: stratus.Connection,
 ) -> actor.Next(String, State) {
-  logging.log(logging.Debug, "Received text message: " <> msg)
   logging.log(logging.Debug, "Current state: " <> string.inspect(state))
+  logging.log(logging.Debug, "Received text message: " <> msg)
 
   case state.initialized {
     False -> {
@@ -98,7 +99,9 @@ fn handle_text(
 }
 
 fn handle_user(msg: String, state: State) -> actor.Next(String, State) {
+  logging.log(logging.Debug, "Current state: " <> string.inspect(state))
   logging.log(logging.Debug, "Received user message: " <> msg)
+
   actor.continue(state)
 }
 
