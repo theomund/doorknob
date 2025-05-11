@@ -140,12 +140,12 @@ pub fn start() -> Nil {
     stratus.websocket(request: req, init:, loop:)
     |> stratus.on_close(on_close)
 
-  let assert Ok(subj) = stratus.initialize(builder)
+  let assert Ok(subject) = stratus.initialize(builder)
 
   let done =
     process.new_selector()
     |> process.selecting_process_down(
-      process.monitor_process(process.subject_owner(subj)),
+      process.monitor_process(process.subject_owner(subject)),
       function.identity,
     )
     |> process.select_forever
