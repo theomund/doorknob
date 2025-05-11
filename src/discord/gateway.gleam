@@ -31,11 +31,11 @@ import repeatedly
 import stratus
 
 pub type State {
-  State(initialized: Bool, s: Int)
+  State(initialized: Bool, sequence: Int)
 }
 
 fn init() -> #(State, option.Option(process.Selector(String))) {
-  let initial_state = State(initialized: False, s: 0)
+  let initial_state = State(initialized: False, sequence: 0)
 
   logging.log(logging.Debug, "Initial state: " <> string.inspect(initial_state))
 
@@ -67,7 +67,7 @@ fn handle_text(
       process.start(
         fn() {
           repeatedly.call(heartbeat_interval, Nil, fn(_state, count) {
-            heartbeat.new(state.s) |> heartbeat.send(conn, count)
+            heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
           })
         },
         False,
@@ -75,7 +75,7 @@ fn handle_text(
 
       authentication.token() |> identify.new(513) |> identify.send(conn)
 
-      let new_state = State(initialized: True, s: state.s)
+      let new_state = State(initialized: True, sequence: state.sequence)
 
       actor.continue(new_state)
     }
@@ -90,7 +90,7 @@ fn handle_text(
       case unknown.sequence(event) {
         option.None -> actor.continue(state)
         option.Some(s) -> {
-          let new_state = State(initialized: state.initialized, s:)
+          let new_state = State(initialized: state.initialized, sequence: s)
           actor.continue(new_state)
         }
       }
