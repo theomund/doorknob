@@ -17,7 +17,8 @@
 import gleam/io
 
 pub fn title() -> Nil {
-  io.println("Doorknob v0.1.0")
-  io.println("Copyright (C) 2025 Theomund")
-  io.println("===========================")
+  io.println("┌─────────────────────────────┐")
+  io.println("│ Doorknob v0.1.0             │")
+  io.println("│ Copyright (C) 2025 Theomund │")
+  io.println("└─────────────────────────────┘")
 }
