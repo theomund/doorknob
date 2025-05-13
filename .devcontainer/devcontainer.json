@@ -8,7 +8,7 @@
             "extensions": [
                 "GitHub.vscode-github-actions",
                 "gleam.gleam",
-                "ms-azuretools.vscode-docker",
+                "ms-azuretools.vscode-containers",
                 "tamasfe.even-better-toml"
             ]
         }
