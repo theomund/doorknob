@@ -21,12 +21,7 @@ import gleam/string
 import logging
 
 pub type State {
-  State(
-    count: Int,
-    interval: Int,
-    listener: process.Subject(mailbox.Message),
-    sequence: Int,
-  )
+  State(count: Int, interval: Int, listener: process.Subject(mailbox.Message))
 }
 
 pub fn loop(
@@ -50,13 +45,12 @@ pub fn loop(
           count: state.count + 1,
           interval: state.interval,
           listener: state.listener,
-          sequence: state.sequence,
         )
 
       process.send_after(
         new_state.listener,
         new_state.interval,
-        mailbox.Heartbeat(new_state.count, new_state.sequence),
+        mailbox.Heartbeat(new_state.count),
       )
 
       actor.continue(new_state)
@@ -68,34 +62,13 @@ pub fn loop(
       )
 
       let new_state =
-        State(
-          count: state.count,
-          interval: duration,
-          listener: state.listener,
-          sequence: state.sequence,
-        )
+        State(count: state.count, interval: duration, listener: state.listener)
 
       process.send_after(
         new_state.listener,
         new_state.interval,
-        mailbox.Heartbeat(new_state.count, new_state.sequence),
+        mailbox.Heartbeat(new_state.count),
       )
-
-      actor.continue(new_state)
-    }
-    mailbox.Sequence(number) -> {
-      logging.log(
-        logging.Debug,
-        "Handling sequence message: " <> string.inspect(msg),
-      )
-
-      let new_state =
-        State(
-          count: state.count,
-          interval: state.interval,
-          listener: state.listener,
-          sequence: number,
-        )
 
       actor.continue(new_state)
     }
@@ -106,7 +79,9 @@ pub fn loop(
 pub fn new(
   listener: process.Subject(mailbox.Message),
 ) -> process.Subject(mailbox.Message) {
-  let assert Ok(subject) =
-    actor.start(State(count: 1, interval: 0, listener:, sequence: 0), loop)
+  let state = State(count: 1, interval: 0, listener:)
+
+  let assert Ok(subject) = actor.start(state, loop)
+
   subject
 }

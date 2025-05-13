@@ -16,7 +16,6 @@
 
 pub type Message {
   Done
-  Heartbeat(count: Int, sequence: Int)
+  Heartbeat(count: Int)
   Interval(duration: Int)
-  Sequence(number: Int)
 }

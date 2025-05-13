@@ -32,7 +32,11 @@ import logging
 import stratus
 
 pub type State {
-  State(initialized: Bool, pulsator: process.Subject(mailbox.Message))
+  State(
+    initialized: Bool,
+    pulsator: process.Subject(mailbox.Message),
+    sequence: Int,
+  )
 }
 
 fn init() -> #(State, option.Option(process.Selector(mailbox.Message))) {
@@ -40,15 +44,15 @@ fn init() -> #(State, option.Option(process.Selector(mailbox.Message))) {
 
   let subject = pulsator.new(self)
 
-  let initial_state = State(initialized: False, pulsator: subject)
+  let state = State(initialized: False, pulsator: subject, sequence: 0)
 
-  logging.log(logging.Debug, "Initial state: " <> string.inspect(initial_state))
+  logging.log(logging.Debug, "Initial state: " <> string.inspect(state))
 
   let selector =
     process.new_selector()
     |> process.selecting(self, function.identity)
 
-  #(initial_state, option.Some(selector))
+  #(state, option.Some(selector))
 }
 
 fn handle_binary(
@@ -77,7 +81,12 @@ fn handle_text(
 
       authentication.token() |> identify.new(513) |> identify.send(conn)
 
-      let new_state = State(initialized: True, pulsator: state.pulsator)
+      let new_state =
+        State(
+          initialized: True,
+          pulsator: state.pulsator,
+          sequence: state.sequence,
+        )
 
       actor.continue(new_state)
     }
@@ -90,13 +99,14 @@ fn handle_text(
       )
 
       case unknown.sequence(event) {
-        option.None -> Nil
+        option.None -> actor.continue(state)
         option.Some(number) -> {
-          process.send(state.pulsator, mailbox.Sequence(number))
+          let new_state =
+            State(initialized: True, pulsator: state.pulsator, sequence: number)
+
+          actor.continue(new_state)
         }
       }
-
-      actor.continue(state)
     }
   }
 }
@@ -107,13 +117,13 @@ fn handle_user(
   conn: stratus.Connection,
 ) -> actor.Next(mailbox.Message, State) {
   case msg {
-    mailbox.Heartbeat(count, sequence) -> {
+    mailbox.Heartbeat(count) -> {
       logging.log(
         logging.Debug,
         "Handling heartbeat message: " <> string.inspect(msg),
       )
 
-      heartbeat.new(sequence) |> heartbeat.send(conn, count)
+      heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
 
       process.send(state.pulsator, mailbox.Done)
     }
