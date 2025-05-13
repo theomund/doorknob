@@ -15,10 +15,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import discord/authentication
-import discord/event/heartbeat
-import discord/event/hello
-import discord/event/identify
-import discord/event/unknown
+import discord/gateway/event/heartbeat
+import discord/gateway/event/hello
+import discord/gateway/event/identify
+import discord/gateway/event/unknown
+import discord/gateway/mailbox
+import discord/gateway/pulsator
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
@@ -27,25 +29,34 @@ import gleam/option
 import gleam/otp/actor
 import gleam/string
 import logging
-import repeatedly
 import stratus
 
 pub type State {
-  State(initialized: Bool, sequence: Int)
+  State(initialized: Bool, pulsator: process.Subject(mailbox.Message))
 }
 
-fn init() -> #(State, option.Option(process.Selector(String))) {
-  let initial_state = State(initialized: False, sequence: 0)
+fn init() -> #(State, option.Option(process.Selector(mailbox.Message))) {
+  let self = process.new_subject()
+
+  let subject = pulsator.new(self)
+
+  let initial_state = State(initialized: False, pulsator: subject)
 
   logging.log(logging.Debug, "Initial state: " <> string.inspect(initial_state))
 
-  #(initial_state, option.None)
+  let selector =
+    process.new_selector()
+    |> process.selecting(self, function.identity)
+
+  #(initial_state, option.Some(selector))
 }
 
-fn handle_binary(msg: BitArray, state: State) -> actor.Next(String, State) {
+fn handle_binary(
+  msg: BitArray,
+  state: State,
+) -> actor.Next(mailbox.Message, State) {
   let assert Ok(content) = bit_array.to_string(msg)
 
-  logging.log(logging.Debug, "Current state: " <> string.inspect(state))
   logging.log(logging.Debug, "Received binary message: " <> content)
 
   actor.continue(state)
@@ -55,27 +66,18 @@ fn handle_text(
   msg: String,
   state: State,
   conn: stratus.Connection,
-) -> actor.Next(String, State) {
-  logging.log(logging.Debug, "Current state: " <> string.inspect(state))
+) -> actor.Next(mailbox.Message, State) {
   logging.log(logging.Debug, "Received text message: " <> msg)
 
   case state.initialized {
     False -> {
-      let heartbeat_interval =
-        hello.from_string(msg) |> hello.heartbeat_interval()
+      let interval = hello.from_string(msg) |> hello.heartbeat_interval()
 
-      process.start(
-        fn() {
-          repeatedly.call(heartbeat_interval, Nil, fn(_state, count) {
-            heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
-          })
-        },
-        False,
-      )
+      process.send(state.pulsator, mailbox.Interval(interval))
 
       authentication.token() |> identify.new(513) |> identify.send(conn)
 
-      let new_state = State(initialized: True, sequence: state.sequence)
+      let new_state = State(initialized: True, pulsator: state.pulsator)
 
       actor.continue(new_state)
     }
@@ -88,32 +90,53 @@ fn handle_text(
       )
 
       case unknown.sequence(event) {
-        option.None -> actor.continue(state)
-        option.Some(s) -> {
-          let new_state = State(initialized: state.initialized, sequence: s)
-          actor.continue(new_state)
+        option.None -> Nil
+        option.Some(number) -> {
+          process.send(state.pulsator, mailbox.Sequence(number))
         }
       }
+
+      actor.continue(state)
     }
   }
 }
 
-fn handle_user(msg: String, state: State) -> actor.Next(String, State) {
-  logging.log(logging.Debug, "Current state: " <> string.inspect(state))
-  logging.log(logging.Debug, "Received user message: " <> msg)
+fn handle_user(
+  msg: mailbox.Message,
+  state: State,
+  conn: stratus.Connection,
+) -> actor.Next(mailbox.Message, State) {
+  case msg {
+    mailbox.Heartbeat(count, sequence) -> {
+      logging.log(
+        logging.Debug,
+        "Handling heartbeat message: " <> string.inspect(msg),
+      )
+
+      heartbeat.new(sequence) |> heartbeat.send(conn, count)
+
+      process.send(state.pulsator, mailbox.Done)
+    }
+    _ -> Nil
+  }
 
   actor.continue(state)
 }
 
 fn loop(
-  msg: stratus.Message(String),
+  msg: stratus.Message(mailbox.Message),
   state: State,
   conn: stratus.Connection,
-) -> actor.Next(String, State) {
+) -> actor.Next(mailbox.Message, State) {
+  logging.log(
+    logging.Debug,
+    "Current listener state: " <> string.inspect(state),
+  )
+
   case msg {
     stratus.Binary(msg) -> handle_binary(msg, state)
     stratus.Text(msg) -> handle_text(msg, state, conn)
-    stratus.User(msg) -> handle_user(msg, state)
+    stratus.User(msg) -> handle_user(msg, state, conn)
   }
 }
 

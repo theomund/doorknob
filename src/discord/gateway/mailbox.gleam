@@ -14,24 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import discord/authentication
-import discord/gateway/event/hello
-import envoy
-import gleeunit/should
-
-pub fn token_test() -> Nil {
-  envoy.set("DISCORD_TOKEN", "abcdef")
-  authentication.token() |> should.equal("abcdef")
-}
-
-pub fn hello_decode_test() -> Nil {
-  let encoded =
-    "{\"t\":null,\"s\":null,\"op\":10,\"d\":{\"heartbeat_interval\":41250,\"_trace\":[\"[\\\"gateway-prd-us-east1-c-n2nk\\\",{\\\"micros\\\":0.0}]\"]}}"
-
-  let actual = hello.from_string(encoded)
-
-  let data = hello.Data(heartbeat_interval: 41_250)
-  let expected = hello.Event(op: 10, d: data)
-
-  actual |> should.equal(expected)
+pub type Message {
+  Done
+  Heartbeat(count: Int, sequence: Int)
+  Interval(duration: Int)
+  Sequence(number: Int)
 }

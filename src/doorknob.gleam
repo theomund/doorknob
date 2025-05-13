@@ -15,11 +15,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import console
-import discord/gateway
+import discord/gateway/listener
 import loggers
 
 pub fn main() -> Nil {
   loggers.setup()
   console.title()
-  gateway.start()
+  listener.start()
 }

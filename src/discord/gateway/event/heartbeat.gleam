@@ -37,7 +37,7 @@ pub fn to_string(event: Event) -> String {
 pub fn send(event: Event, conn: stratus.Connection, count: Int) -> Nil {
   let response = to_string(event) |> stratus.send_text_message(conn, _)
 
-  let attempt = int.to_string(count + 1)
+  let attempt = int.to_string(count)
 
   case response {
     Ok(_) ->
