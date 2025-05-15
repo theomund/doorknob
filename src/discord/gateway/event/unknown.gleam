@@ -46,3 +46,7 @@ pub fn from_string(encoded: String) -> Event {
 pub fn sequence(event: Event) -> option.Option(Int) {
   event.s
 }
+
+pub fn opcode(event: Event) -> Int {
+  event.op
+}

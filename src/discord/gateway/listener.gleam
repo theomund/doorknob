@@ -93,10 +93,43 @@ fn handle_text(
     True -> {
       let event = unknown.from_string(msg)
 
-      logging.log(
-        logging.Warning,
-        "Received unhandled event: " <> string.inspect(event),
-      )
+      case unknown.opcode(event) {
+        0 ->
+          logging.log(
+            logging.Info,
+            "Received a dispatch event: " <> string.inspect(event),
+          )
+        1 ->
+          logging.log(
+            logging.Info,
+            "Received a heartbeat event: " <> string.inspect(event),
+          )
+        7 ->
+          logging.log(
+            logging.Warning,
+            "Receive a reconnect event: " <> string.inspect(event),
+          )
+        9 ->
+          logging.log(
+            logging.Error,
+            "Received an invalid session event: " <> string.inspect(event),
+          )
+        10 ->
+          logging.log(
+            logging.Info,
+            "Received a hello event: " <> string.inspect(event),
+          )
+        11 ->
+          logging.log(
+            logging.Info,
+            "Received an acknowledgement event: " <> string.inspect(event),
+          )
+        _ ->
+          logging.log(
+            logging.Warning,
+            "Received an unhandled event: " <> string.inspect(event),
+          )
+      }
 
       case unknown.sequence(event) {
         option.None -> actor.continue(state)
