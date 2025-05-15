@@ -30,7 +30,7 @@ pub fn loop(
 ) -> actor.Next(mailbox.Message, State) {
   logging.log(
     logging.Debug,
-    "Current pulsator state: " <> string.inspect(state),
+    "Current pacemaker state: " <> string.inspect(state),
   )
 
   case msg {

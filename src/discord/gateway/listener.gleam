@@ -20,7 +20,7 @@ import discord/gateway/event/hello
 import discord/gateway/event/identify
 import discord/gateway/event/unknown
 import discord/gateway/mailbox
-import discord/gateway/pulsator
+import discord/gateway/pacemaker
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
@@ -34,7 +34,7 @@ import stratus
 pub type State {
   State(
     initialized: Bool,
-    pulsator: process.Subject(mailbox.Message),
+    pacemaker: process.Subject(mailbox.Message),
     sequence: Int,
   )
 }
@@ -42,9 +42,9 @@ pub type State {
 fn init() -> #(State, option.Option(process.Selector(mailbox.Message))) {
   let self = process.new_subject()
 
-  let subject = pulsator.new(self)
+  let subject = pacemaker.new(self)
 
-  let state = State(initialized: False, pulsator: subject, sequence: 0)
+  let state = State(initialized: False, pacemaker: subject, sequence: 0)
 
   logging.log(logging.Debug, "Initial state: " <> string.inspect(state))
 
@@ -77,14 +77,14 @@ fn handle_text(
     False -> {
       let interval = hello.from_string(msg) |> hello.heartbeat_interval()
 
-      process.send(state.pulsator, mailbox.Interval(interval))
+      process.send(state.pacemaker, mailbox.Interval(interval))
 
       authentication.token() |> identify.new(513) |> identify.send(conn)
 
       let new_state =
         State(
           initialized: True,
-          pulsator: state.pulsator,
+          pacemaker: state.pacemaker,
           sequence: state.sequence,
         )
 
@@ -102,7 +102,11 @@ fn handle_text(
         option.None -> actor.continue(state)
         option.Some(number) -> {
           let new_state =
-            State(initialized: True, pulsator: state.pulsator, sequence: number)
+            State(
+              initialized: True,
+              pacemaker: state.pacemaker,
+              sequence: number,
+            )
 
           actor.continue(new_state)
         }
@@ -125,7 +129,7 @@ fn handle_user(
 
       heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
 
-      process.send(state.pulsator, mailbox.Done)
+      process.send(state.pacemaker, mailbox.Done)
     }
     _ -> Nil
   }
