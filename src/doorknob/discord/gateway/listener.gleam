@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import discord/authentication
-import discord/gateway/event/heartbeat
-import discord/gateway/event/hello
-import discord/gateway/event/identify
-import discord/gateway/event/unknown
-import discord/gateway/mailbox
-import discord/gateway/pacemaker
+import doorknob/discord/authentication
+import doorknob/discord/gateway/event/heartbeat
+import doorknob/discord/gateway/event/hello
+import doorknob/discord/gateway/event/identify
+import doorknob/discord/gateway/event/unknown
+import doorknob/discord/gateway/mailbox
+import doorknob/discord/gateway/pacemaker
 import gleam/bit_array
 import gleam/erlang/process
 import gleam/function

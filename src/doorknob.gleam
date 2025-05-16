@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import console
-import discord/gateway/listener
-import loggers
+import doorknob/console
+import doorknob/discord/gateway/listener
+import doorknob/logger
 
 pub fn main() -> Nil {
-  loggers.setup()
+  logger.setup()
   console.title()
   listener.start()
 }

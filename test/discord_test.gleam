@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import discord/authentication
-import discord/gateway/event/hello
+import doorknob/discord/authentication
+import doorknob/discord/gateway/event/hello
 import envoy
 import gleeunit/should
 
