@@ -16,6 +16,6 @@
 
 import gleam/int
 
-pub fn url(version: Int) -> String {
-  "https://discord.com/api/v" <> int.to_string(version)
+pub fn url(version: Int, path: String) -> String {
+  "https://discord.com/api/v" <> int.to_string(version) <> path
 }

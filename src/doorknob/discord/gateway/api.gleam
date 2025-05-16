@@ -15,8 +15,39 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import doorknob/discord/http/api
-import gleeunit/should
+import gleam/dynamic/decode
+import gleam/http/request
+import gleam/httpc
+import gleam/int
+import gleam/json
+import gleam/string
 
-pub fn url_test() -> Nil {
-  api.url(10, "") |> should.equal("https://discord.com/api/v10")
+type Gateway {
+  Gateway(url: String)
+}
+
+pub fn url(version: Int, encoding: String) -> String {
+  let assert Ok(req) = api.url(10, "/gateway") |> request.to()
+
+  req
+  |> request.set_header(
+    "user-agent",
+    "Doorknob (https://github.com/theomund/doorknob, 0.1.0)",
+  )
+
+  let assert Ok(resp) = httpc.send(req)
+
+  let decoder = {
+    use url <- decode.field("url", decode.string)
+    decode.success(Gateway(url:))
+  }
+
+  let assert Ok(gateway) = json.parse(from: resp.body, using: decoder)
+
+  gateway.url
+  |> string.replace(each: "wss", with: "https")
+  <> "?v="
+  <> int.to_string(version)
+  <> "&encoding="
+  <> encoding
 }

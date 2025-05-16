@@ -15,6 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import doorknob/discord/authentication
+import doorknob/discord/gateway/api
 import doorknob/discord/gateway/event/heartbeat
 import doorknob/discord/gateway/event/hello
 import doorknob/discord/gateway/event/identify
@@ -242,8 +243,7 @@ fn on_close(state: State) -> Nil {
 pub fn start() -> Nil {
   logging.log(logging.Info, "Gateway process started")
 
-  let assert Ok(req) =
-    request.to("https://gateway.discord.gg?v=10&encoding=json")
+  let assert Ok(req) = api.url(10, "json") |> request.to()
 
   req
   |> request.set_header(
