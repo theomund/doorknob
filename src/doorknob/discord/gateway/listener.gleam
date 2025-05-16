@@ -66,6 +66,111 @@ fn handle_binary(
   actor.continue(state)
 }
 
+pub fn handle_dispatch(msg: String, state: State) -> State {
+  let event = unknown.from_string(msg)
+
+  logging.log(
+    logging.Info,
+    "Received a dispatch event: " <> string.inspect(event),
+  )
+
+  state
+}
+
+pub fn handle_heartbeat(msg: String, state: State) -> State {
+  let event = unknown.from_string(msg)
+
+  logging.log(
+    logging.Info,
+    "Received a heartbeat event: " <> string.inspect(event),
+  )
+
+  state
+}
+
+pub fn handle_reconnect(msg: String, state: State) -> State {
+  let event = unknown.from_string(msg)
+
+  logging.log(
+    logging.Info,
+    "Received a reconnect event: " <> string.inspect(event),
+  )
+
+  state
+}
+
+pub fn handle_invalid_session(msg: String, state: State) -> State {
+  let event = unknown.from_string(msg)
+
+  logging.log(
+    logging.Info,
+    "Received an invalid session event: " <> string.inspect(event),
+  )
+
+  state
+}
+
+pub fn handle_hello(
+  msg: String,
+  state: State,
+  conn: stratus.Connection,
+) -> State {
+  let event = hello.from_string(msg)
+
+  logging.log(logging.Info, "Received a hello event: " <> string.inspect(event))
+
+  case state.initialized {
+    False -> {
+      let interval = event |> hello.heartbeat_interval()
+
+      process.send(state.pacemaker, mailbox.Interval(interval))
+
+      let intents = 513
+
+      authentication.token() |> identify.new(intents) |> identify.send(conn)
+
+      State(
+        initialized: True,
+        pacemaker: state.pacemaker,
+        sequence: state.sequence,
+      )
+    }
+    True -> {
+      logging.log(logging.Debug, "Skipping initialization logic")
+
+      state
+    }
+  }
+}
+
+pub fn handle_acknowledgement(msg: String, state: State) -> State {
+  let event = unknown.from_string(msg)
+
+  logging.log(
+    logging.Info,
+    "Received an acknowledgement event: " <> string.inspect(event),
+  )
+
+  state
+}
+
+pub fn handle_unknown(event: unknown.Event, state: State) -> State {
+  logging.log(
+    logging.Info,
+    "Received an unknown event: " <> string.inspect(event),
+  )
+
+  case unknown.sequence(event) {
+    option.None -> state
+    option.Some(number) ->
+      State(
+        initialized: state.initialized,
+        pacemaker: state.pacemaker,
+        sequence: number,
+      )
+  }
+}
+
 fn handle_text(
   msg: String,
   state: State,
@@ -73,79 +178,19 @@ fn handle_text(
 ) -> actor.Next(mailbox.Message, State) {
   logging.log(logging.Debug, "Received text message: " <> msg)
 
-  case state.initialized {
-    False -> {
-      let interval = hello.from_string(msg) |> hello.heartbeat_interval()
+  let event = unknown.from_string(msg)
 
-      process.send(state.pacemaker, mailbox.Interval(interval))
-
-      authentication.token() |> identify.new(513) |> identify.send(conn)
-
-      let new_state =
-        State(
-          initialized: True,
-          pacemaker: state.pacemaker,
-          sequence: state.sequence,
-        )
-
-      actor.continue(new_state)
-    }
-    True -> {
-      let event = unknown.from_string(msg)
-
-      case unknown.opcode(event) {
-        0 ->
-          logging.log(
-            logging.Info,
-            "Received a dispatch event: " <> string.inspect(event),
-          )
-        1 ->
-          logging.log(
-            logging.Info,
-            "Received a heartbeat event: " <> string.inspect(event),
-          )
-        7 ->
-          logging.log(
-            logging.Warning,
-            "Receive a reconnect event: " <> string.inspect(event),
-          )
-        9 ->
-          logging.log(
-            logging.Error,
-            "Received an invalid session event: " <> string.inspect(event),
-          )
-        10 ->
-          logging.log(
-            logging.Info,
-            "Received a hello event: " <> string.inspect(event),
-          )
-        11 ->
-          logging.log(
-            logging.Info,
-            "Received an acknowledgement event: " <> string.inspect(event),
-          )
-        _ ->
-          logging.log(
-            logging.Warning,
-            "Received an unhandled event: " <> string.inspect(event),
-          )
-      }
-
-      case unknown.sequence(event) {
-        option.None -> actor.continue(state)
-        option.Some(number) -> {
-          let new_state =
-            State(
-              initialized: True,
-              pacemaker: state.pacemaker,
-              sequence: number,
-            )
-
-          actor.continue(new_state)
-        }
-      }
-    }
+  let new_state = case unknown.opcode(event) {
+    0 -> handle_dispatch(msg, state)
+    1 -> handle_heartbeat(msg, state)
+    7 -> handle_reconnect(msg, state)
+    9 -> handle_invalid_session(msg, state)
+    10 -> handle_hello(msg, state, conn)
+    11 -> handle_acknowledgement(msg, state)
+    _ -> handle_unknown(event, state)
   }
+
+  actor.continue(new_state)
 }
 
 fn handle_user(
