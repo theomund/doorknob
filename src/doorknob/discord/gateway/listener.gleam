@@ -152,6 +152,8 @@ pub fn handle_acknowledgement(msg: String, state: State) -> State {
     "Received an acknowledgement event: " <> string.inspect(event),
   )
 
+  process.send(state.pacemaker, mailbox.Done)
+
   state
 }
 
@@ -207,8 +209,6 @@ fn handle_user(
       )
 
       heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
-
-      process.send(state.pacemaker, mailbox.Done)
     }
     _ -> Nil
   }
