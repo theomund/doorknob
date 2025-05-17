@@ -20,11 +20,11 @@ import gleam/otp/actor
 import gleam/string
 import logging
 
-pub type State {
+type State {
   State(count: Int, interval: Int, listener: process.Subject(mailbox.Message))
 }
 
-pub fn loop(
+fn loop(
   msg: mailbox.Message,
   state: State,
 ) -> actor.Next(mailbox.Message, State) {

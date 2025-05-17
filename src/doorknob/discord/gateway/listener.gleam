@@ -32,7 +32,7 @@ import gleam/string
 import logging
 import stratus
 
-pub type State {
+type State {
   State(
     initialized: Bool,
     pacemaker: process.Subject(mailbox.Message),
@@ -67,7 +67,7 @@ fn handle_binary(
   actor.continue(state)
 }
 
-pub fn handle_dispatch_event(msg: String, state: State) -> State {
+fn handle_dispatch_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -78,7 +78,7 @@ pub fn handle_dispatch_event(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_heartbeat_event(msg: String, state: State) -> State {
+fn handle_heartbeat_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -89,7 +89,7 @@ pub fn handle_heartbeat_event(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_reconnect_event(msg: String, state: State) -> State {
+fn handle_reconnect_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -100,7 +100,7 @@ pub fn handle_reconnect_event(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_invalid_session_event(msg: String, state: State) -> State {
+fn handle_invalid_session_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -111,7 +111,7 @@ pub fn handle_invalid_session_event(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_hello_event(
+fn handle_hello_event(
   msg: String,
   state: State,
   conn: stratus.Connection,
@@ -144,7 +144,7 @@ pub fn handle_hello_event(
   }
 }
 
-pub fn handle_acknowledgement_event(msg: String, state: State) -> State {
+fn handle_acknowledgement_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -157,7 +157,7 @@ pub fn handle_acknowledgement_event(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_unknown_event(event: unknown.Event, state: State) -> State {
+fn handle_unknown_event(event: unknown.Event, state: State) -> State {
   logging.log(
     logging.Info,
     "Received an unknown event: " <> string.inspect(event),
