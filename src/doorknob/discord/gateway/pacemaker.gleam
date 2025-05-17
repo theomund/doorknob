@@ -37,12 +37,7 @@ fn loop(
     mailbox.Done -> {
       logging.log(logging.Debug, "Received done message")
 
-      let new_state =
-        State(
-          count: state.count + 1,
-          interval: state.interval,
-          listener: state.listener,
-        )
+      let new_state = State(..state, count: state.count + 1)
 
       process.send_after(
         new_state.listener,
@@ -58,8 +53,7 @@ fn loop(
         "Handling interval message: " <> string.inspect(msg),
       )
 
-      let new_state =
-        State(count: state.count, interval: duration, listener: state.listener)
+      let new_state = State(..state, interval: duration)
 
       process.send_after(
         new_state.listener,

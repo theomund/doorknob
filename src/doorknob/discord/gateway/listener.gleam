@@ -130,11 +130,7 @@ fn handle_hello_event(
 
       authentication.token() |> identify.new(intents) |> identify.send(conn)
 
-      State(
-        initialized: True,
-        pacemaker: state.pacemaker,
-        sequence: state.sequence,
-      )
+      State(..state, initialized: True)
     }
     True -> {
       logging.log(logging.Debug, "Skipping initialization logic")
@@ -165,12 +161,7 @@ fn handle_unknown_event(event: unknown.Event, state: State) -> State {
 
   case unknown.sequence(event) {
     option.None -> state
-    option.Some(number) ->
-      State(
-        initialized: state.initialized,
-        pacemaker: state.pacemaker,
-        sequence: number,
-      )
+    option.Some(number) -> State(..state, sequence: number)
   }
 }
 
