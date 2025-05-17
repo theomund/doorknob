@@ -29,8 +29,8 @@ type Gateway {
 pub fn url(version: Int, encoding: String) -> String {
   let assert Ok(req) = api.url(10, "/gateway") |> request.to()
 
-  req
-  |> request.set_header(
+  request.set_header(
+    req,
     "user-agent",
     "Doorknob (https://github.com/theomund/doorknob, 0.1.0)",
   )
