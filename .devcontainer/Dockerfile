@@ -23,7 +23,7 @@ RUN dnf config-manager addrepo --from-repofile=https://mise.jdx.dev/rpm/mise.rep
     gcc-c++-15.1.1 \
     git-2.49.0 \
     gnupg2-2.4.7 \
-    mise-2025.5.5 \
+    mise-2025.5.6 \
     openssl-devel-3.2.4 \
     ncurses-devel-6.5 \
     procps-ng-4.0.4 \
