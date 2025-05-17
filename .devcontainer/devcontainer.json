@@ -13,8 +13,5 @@
             ]
         }
     },
-    "postCreateCommand": "mise trust",
-    "securityOpt": [
-        "label=disable"
-    ]
+    "postCreateCommand": "mise trust"
 }
