@@ -24,6 +24,40 @@ type State {
   State(count: Int, interval: Int, listener: process.Subject(mailbox.Message))
 }
 
+fn handle_done_message(state: State) -> State {
+  logging.log(logging.Debug, "Received done message")
+
+  let new_state = State(..state, count: state.count + 1)
+
+  process.send_after(
+    new_state.listener,
+    new_state.interval,
+    mailbox.Heartbeat(new_state.count),
+  )
+
+  new_state
+}
+
+fn handle_interval_message(state: State, duration: Int) -> State {
+  logging.log(logging.Debug, "Received interval message")
+
+  let new_state = State(..state, interval: duration)
+
+  process.send_after(
+    new_state.listener,
+    new_state.interval,
+    mailbox.Heartbeat(new_state.count),
+  )
+
+  new_state
+}
+
+fn handle_unknown_message(state: State) -> State {
+  logging.log(logging.Warning, "Received unknown message")
+
+  state
+}
+
 fn loop(
   msg: mailbox.Message,
   state: State,
@@ -33,38 +67,13 @@ fn loop(
     "Current pacemaker state: " <> string.inspect(state),
   )
 
-  case msg {
-    mailbox.Done -> {
-      logging.log(logging.Debug, "Received done message")
-
-      let new_state = State(..state, count: state.count + 1)
-
-      process.send_after(
-        new_state.listener,
-        new_state.interval,
-        mailbox.Heartbeat(new_state.count),
-      )
-
-      actor.continue(new_state)
-    }
-    mailbox.Interval(duration) -> {
-      logging.log(
-        logging.Debug,
-        "Handling interval message: " <> string.inspect(msg),
-      )
-
-      let new_state = State(..state, interval: duration)
-
-      process.send_after(
-        new_state.listener,
-        new_state.interval,
-        mailbox.Heartbeat(new_state.count),
-      )
-
-      actor.continue(new_state)
-    }
-    _ -> actor.continue(state)
+  let new_state = case msg {
+    mailbox.Done -> handle_done_message(state)
+    mailbox.Interval(duration) -> handle_interval_message(state, duration)
+    _ -> handle_unknown_message(state)
   }
+
+  actor.continue(new_state)
 }
 
 pub fn new(
