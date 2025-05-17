@@ -35,10 +35,7 @@ pub fn loop(
 
   case msg {
     mailbox.Done -> {
-      logging.log(
-        logging.Debug,
-        "Handling done message: " <> string.inspect(msg),
-      )
+      logging.log(logging.Debug, "Received done message")
 
       let new_state =
         State(

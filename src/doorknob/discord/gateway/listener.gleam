@@ -67,7 +67,7 @@ fn handle_binary(
   actor.continue(state)
 }
 
-pub fn handle_dispatch(msg: String, state: State) -> State {
+pub fn handle_dispatch_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -78,7 +78,7 @@ pub fn handle_dispatch(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_heartbeat(msg: String, state: State) -> State {
+pub fn handle_heartbeat_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -89,7 +89,7 @@ pub fn handle_heartbeat(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_reconnect(msg: String, state: State) -> State {
+pub fn handle_reconnect_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -100,7 +100,7 @@ pub fn handle_reconnect(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_invalid_session(msg: String, state: State) -> State {
+pub fn handle_invalid_session_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -111,7 +111,7 @@ pub fn handle_invalid_session(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_hello(
+pub fn handle_hello_event(
   msg: String,
   state: State,
   conn: stratus.Connection,
@@ -144,7 +144,7 @@ pub fn handle_hello(
   }
 }
 
-pub fn handle_acknowledgement(msg: String, state: State) -> State {
+pub fn handle_acknowledgement_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
@@ -157,7 +157,7 @@ pub fn handle_acknowledgement(msg: String, state: State) -> State {
   state
 }
 
-pub fn handle_unknown(event: unknown.Event, state: State) -> State {
+pub fn handle_unknown_event(event: unknown.Event, state: State) -> State {
   logging.log(
     logging.Info,
     "Received an unknown event: " <> string.inspect(event),
@@ -184,16 +184,30 @@ fn handle_text(
   let event = unknown.from_string(msg)
 
   let new_state = case unknown.opcode(event) {
-    0 -> handle_dispatch(msg, state)
-    1 -> handle_heartbeat(msg, state)
-    7 -> handle_reconnect(msg, state)
-    9 -> handle_invalid_session(msg, state)
-    10 -> handle_hello(msg, state, conn)
-    11 -> handle_acknowledgement(msg, state)
-    _ -> handle_unknown(event, state)
+    0 -> handle_dispatch_event(msg, state)
+    1 -> handle_heartbeat_event(msg, state)
+    7 -> handle_reconnect_event(msg, state)
+    9 -> handle_invalid_session_event(msg, state)
+    10 -> handle_hello_event(msg, state, conn)
+    11 -> handle_acknowledgement_event(msg, state)
+    _ -> handle_unknown_event(event, state)
   }
 
   actor.continue(new_state)
+}
+
+fn handle_heartbeat_message(
+  count: Int,
+  state: State,
+  conn: stratus.Connection,
+) -> Nil {
+  logging.log(logging.Debug, "Received a heartbeat message")
+
+  heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
+}
+
+fn handle_unknown_message() -> Nil {
+  logging.log(logging.Warning, "Received an unknown message")
 }
 
 fn handle_user(
@@ -202,15 +216,8 @@ fn handle_user(
   conn: stratus.Connection,
 ) -> actor.Next(mailbox.Message, State) {
   case msg {
-    mailbox.Heartbeat(count) -> {
-      logging.log(
-        logging.Debug,
-        "Handling heartbeat message: " <> string.inspect(msg),
-      )
-
-      heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
-    }
-    _ -> Nil
+    mailbox.Heartbeat(count) -> handle_heartbeat_message(count, state, conn)
+    _ -> handle_unknown_message()
   }
 
   actor.continue(state)
