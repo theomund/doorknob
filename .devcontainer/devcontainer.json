@@ -8,13 +8,10 @@
             "extensions": [
                 "GitHub.vscode-github-actions",
                 "gleam.gleam",
-                "ms-azuretools.vscode-docker",
+                "ms-azuretools.vscode-containers",
                 "tamasfe.even-better-toml"
             ]
         }
     },
-    "postCreateCommand": "mise trust",
-    "securityOpt": [
-        "label=disable"
-    ]
+    "postCreateCommand": "mise trust"
 }

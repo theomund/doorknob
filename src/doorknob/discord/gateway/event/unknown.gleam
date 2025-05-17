@@ -14,12 +14,39 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+import gleam/dynamic/decode
+import gleam/json
+import gleam/option
 
-pub fn main() -> Nil {
-  logger.setup()
-  console.title()
-  listener.start()
+pub type Event {
+  Event(op: Int, s: option.Option(Int), t: option.Option(String))
+}
+
+pub fn from_string(encoded: String) -> Event {
+  let decoder = {
+    use op <- decode.field("op", decode.int)
+    use s <- decode.optional_field(
+      "s",
+      option.None,
+      decode.optional(decode.int),
+    )
+    use t <- decode.optional_field(
+      "t",
+      option.None,
+      decode.optional(decode.string),
+    )
+    decode.success(Event(op:, s:, t:))
+  }
+
+  let assert Ok(event) = json.parse(from: encoded, using: decoder)
+
+  event
+}
+
+pub fn sequence(event: Event) -> option.Option(Int) {
+  event.s
+}
+
+pub fn opcode(event: Event) -> Int {
+  event.op
 }

@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import envoy
-import gleam/result
-import logging.{Info}
+import gleam/io
 
-pub fn token() -> String {
-  logging.log(Info, "Fetching authentication token")
-  envoy.get("DISCORD_TOKEN") |> result.unwrap("")
+pub fn title() -> Nil {
+  io.println("┌─────────────────────────────┐")
+  io.println("│ Doorknob v0.1.0             │")
+  io.println("│ Copyright (C) 2025 Theomund │")
+  io.println("└─────────────────────────────┘")
 }

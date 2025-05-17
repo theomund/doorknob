@@ -14,18 +14,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import doorknob/discord/http/api
+import gleam/dynamic/decode
+import gleam/http/request
+import gleam/httpc
+import gleam/int
 import gleam/json
+import gleam/string
 
-pub type Event {
-  Event(op: Int, d: Int)
+type Gateway {
+  Gateway(url: String)
 }
 
-pub fn new(state: Int) -> Event {
-  Event(1, state)
-}
+pub fn url(version: Int, encoding: String) -> String {
+  let assert Ok(req) = api.url(10, "/gateway") |> request.to()
 
-pub fn to_string(event: Event) -> String {
-  json.to_string(
-    json.object([#("op", json.int(event.op)), #("d", json.int(event.d))]),
+  request.set_header(
+    req,
+    "user-agent",
+    "Doorknob (https://github.com/theomund/doorknob, 0.1.0)",
   )
+
+  let assert Ok(resp) = httpc.send(req)
+
+  let decoder = {
+    use url <- decode.field("url", decode.string)
+    decode.success(Gateway(url:))
+  }
+
+  let assert Ok(gateway) = json.parse(from: resp.body, using: decoder)
+
+  gateway.url
+  |> string.replace(each: "wss", with: "https")
+  <> "?v="
+  <> int.to_string(version)
+  <> "&encoding="
+  <> encoding
 }

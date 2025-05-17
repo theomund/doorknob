@@ -14,12 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+import gleam/int
 
-pub fn main() -> Nil {
-  logger.setup()
-  console.title()
-  listener.start()
+pub fn url(version: Int, path: String) -> String {
+  "https://discord.com/api/v" <> int.to_string(version) <> path
 }

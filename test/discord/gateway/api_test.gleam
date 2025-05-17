@@ -14,12 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+import doorknob/discord/gateway/api
+import gleeunit/should
 
-pub fn main() -> Nil {
-  logger.setup()
-  console.title()
-  listener.start()
+pub fn api_test() {
+  api.url(10, "json")
+  |> should.equal("https://gateway.discord.gg?v=10&encoding=json")
 }

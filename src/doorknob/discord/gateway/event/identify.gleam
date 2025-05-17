@@ -15,6 +15,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import gleam/json
+import gleam/string
+import logging
+import stratus
 
 pub type Properties {
   Properties(os: String, browser: String, device: String)
@@ -64,4 +67,27 @@ pub fn to_string(event: Event) -> String {
       ),
     ]),
   )
+}
+
+pub fn send(event: Event, conn: stratus.Connection) -> Nil {
+  let response = to_string(event) |> stratus.send_text_message(conn, _)
+
+  let masked_event =
+    string.length(event.d.token)
+    |> string.repeat("*", _)
+    |> new(event.d.intents)
+
+  case response {
+    Ok(_) ->
+      logging.log(
+        logging.Info,
+        "Identify event was successfully sent: " <> string.inspect(masked_event),
+      )
+    Error(_) ->
+      logging.log(
+        logging.Error,
+        "Identify event was unsuccessfully sent: "
+          <> string.inspect(masked_event),
+      )
+  }
 }

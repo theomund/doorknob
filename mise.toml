@@ -58,11 +58,11 @@ description = "Format the Gleam source code."
 run = "gleam format"
 
 [tasks.lint]
-depends = "lint-vale"
+depends = ["lint-vale"]
 description = "Lint the project."
 
 [tasks.lint-vale]
-depends = ["setup"]
+depends = ["setup-vale"]
 description = "Run the Vale linter."
 run = "vale README.md"
 
@@ -83,6 +83,14 @@ description = "Test the project."
 [tasks.test-gleam]
 description = "Test the Gleam source code."
 run = "gleam test"
+
+[tasks.update]
+depends = ["update-gleam"]
+description = "Update the project."
+
+[tasks.update-gleam]
+description = "Update the Gleam dependencies."
+run = "gleam update"
 
 [tools]
 erlang = "27.3.4"
