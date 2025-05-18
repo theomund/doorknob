@@ -18,7 +18,7 @@ import gleam/int
 import gleam/json
 import gleam/string
 import logging.{Error as Err, Info}
-import stratus
+import stratus.{type Connection}
 
 pub type Event {
   Event(op: Int, d: Int)
@@ -34,7 +34,7 @@ pub fn to_string(event: Event) -> String {
   )
 }
 
-pub fn send(event: Event, conn: stratus.Connection, count: Int) -> Nil {
+pub fn send(event: Event, conn: Connection, count: Int) -> Nil {
   let response = to_string(event) |> stratus.send_text_message(conn, _)
 
   let attempt = int.to_string(count)

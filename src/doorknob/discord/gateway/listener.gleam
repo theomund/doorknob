@@ -30,7 +30,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/string
 import logging.{Debug, Error, Info, Warning}
-import stratus
+import stratus.{type Connection, type Message, Binary, Text, User}
 
 type State {
   State(
@@ -102,11 +102,7 @@ fn handle_invalid_session_event(msg: String, state: State) -> State {
   state
 }
 
-fn handle_hello_event(
-  msg: String,
-  state: State,
-  conn: stratus.Connection,
-) -> State {
+fn handle_hello_event(msg: String, state: State, conn: Connection) -> State {
   let event = hello.from_string(msg)
 
   logging.log(Info, "Received a hello event: " <> string.inspect(event))
@@ -156,7 +152,7 @@ fn handle_unknown_event(event: unknown.Event, state: State) -> State {
 fn handle_text(
   msg: String,
   state: State,
-  conn: stratus.Connection,
+  conn: Connection,
 ) -> actor.Next(mailbox.Message, State) {
   logging.log(Debug, "Received text message: " <> msg)
 
@@ -175,11 +171,7 @@ fn handle_text(
   actor.continue(new_state)
 }
 
-fn handle_heartbeat_message(
-  count: Int,
-  state: State,
-  conn: stratus.Connection,
-) -> Nil {
+fn handle_heartbeat_message(count: Int, state: State, conn: Connection) -> Nil {
   logging.log(Debug, "Received a heartbeat message")
 
   heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
@@ -192,7 +184,7 @@ fn handle_unknown_message() -> Nil {
 fn handle_user(
   msg: mailbox.Message,
   state: State,
-  conn: stratus.Connection,
+  conn: Connection,
 ) -> actor.Next(mailbox.Message, State) {
   case msg {
     mailbox.Heartbeat(count) -> handle_heartbeat_message(count, state, conn)
@@ -203,16 +195,16 @@ fn handle_user(
 }
 
 fn loop(
-  msg: stratus.Message(mailbox.Message),
+  msg: Message(mailbox.Message),
   state: State,
-  conn: stratus.Connection,
+  conn: Connection,
 ) -> actor.Next(mailbox.Message, State) {
   logging.log(Debug, "Current listener state: " <> string.inspect(state))
 
   case msg {
-    stratus.Binary(msg) -> handle_binary(msg, state)
-    stratus.Text(msg) -> handle_text(msg, state, conn)
-    stratus.User(msg) -> handle_user(msg, state, conn)
+    Binary(msg) -> handle_binary(msg, state)
+    Text(msg) -> handle_text(msg, state, conn)
+    User(msg) -> handle_user(msg, state, conn)
   }
 }
 

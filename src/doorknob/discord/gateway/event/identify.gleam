@@ -17,7 +17,7 @@
 import gleam/json
 import gleam/string
 import logging.{Error as Err, Info}
-import stratus
+import stratus.{type Connection}
 
 pub type Properties {
   Properties(os: String, browser: String, device: String)
@@ -69,7 +69,7 @@ pub fn to_string(event: Event) -> String {
   )
 }
 
-pub fn send(event: Event, conn: stratus.Connection) -> Nil {
+pub fn send(event: Event, conn: Connection) -> Nil {
   let response = to_string(event) |> stratus.send_text_message(conn, _)
 
   let masked_event =
