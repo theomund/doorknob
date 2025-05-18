@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+pub type ListenerMessage {
+  Heartbeat(count: Int)
+}
+
 pub type PacemakerMessage {
   Done
   Interval(duration: Int)
-}
-
-pub type ListenerMessage {
-  Heartbeat(count: Int)
 }
