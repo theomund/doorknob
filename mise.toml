@@ -58,8 +58,12 @@ description = "Format the Gleam source code."
 run = "gleam format"
 
 [tasks.lint]
-depends = ["lint-vale"]
+depends = ["lint-hadolint", "lint-vale"]
 description = "Lint the project."
+
+[tasks.lint-hadolint]
+description = "Run the Hadolint linter."
+run = "hadolint .devcontainer/Dockerfile"
 
 [tasks.lint-vale]
 depends = ["setup-vale"]
@@ -95,5 +99,6 @@ run = "gleam update"
 [tools]
 erlang = "27.3.4"
 gleam = "1.10.0"
+hadolint = "2.12.0"
 rebar = "3.24.0"
 vale = "3.11.2"
