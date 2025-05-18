@@ -20,27 +20,25 @@ import doorknob/discord/gateway/event/heartbeat
 import doorknob/discord/gateway/event/hello
 import doorknob/discord/gateway/event/identify
 import doorknob/discord/gateway/event/unknown
-import doorknob/discord/gateway/mailbox
+import doorknob/discord/gateway/mailbox.{
+  type ListenerMessage, type PacemakerMessage, Done, Heartbeat, Interval,
+}
 import doorknob/discord/gateway/pacemaker
 import gleam/bit_array
-import gleam/erlang/process
+import gleam/erlang/process.{type Selector, type Subject}
 import gleam/function
 import gleam/http/request
 import gleam/option.{type Option, None, Some}
-import gleam/otp/actor
+import gleam/otp/actor.{type Next}
 import gleam/string
-import logging.{Debug, Error, Info, Warning}
+import logging.{Debug, Error, Info}
 import stratus.{type Connection, type Message, Binary, Text, User}
 
 type State {
-  State(
-    initialized: Bool,
-    pacemaker: process.Subject(mailbox.Message),
-    sequence: Int,
-  )
+  State(initialized: Bool, pacemaker: Subject(PacemakerMessage), sequence: Int)
 }
 
-fn init() -> #(State, Option(process.Selector(mailbox.Message))) {
+fn init() -> #(State, Option(Selector(ListenerMessage))) {
   let self = process.new_subject()
 
   let subject = pacemaker.new(self)
@@ -56,10 +54,7 @@ fn init() -> #(State, Option(process.Selector(mailbox.Message))) {
   #(state, Some(selector))
 }
 
-fn handle_binary(
-  msg: BitArray,
-  state: State,
-) -> actor.Next(mailbox.Message, State) {
+fn handle_binary(msg: BitArray, state: State) -> Next(ListenerMessage, State) {
   let assert Ok(content) = bit_array.to_string(msg)
 
   logging.log(Debug, "Received binary message: " <> content)
@@ -111,7 +106,7 @@ fn handle_hello_event(msg: String, state: State, conn: Connection) -> State {
     False -> {
       let interval = event |> hello.heartbeat_interval()
 
-      process.send(state.pacemaker, mailbox.Interval(interval))
+      process.send(state.pacemaker, Interval(interval))
 
       let intents = 513
 
@@ -135,7 +130,7 @@ fn handle_acknowledgement_event(msg: String, state: State) -> State {
     "Received an acknowledgement event: " <> string.inspect(event),
   )
 
-  process.send(state.pacemaker, mailbox.Done)
+  process.send(state.pacemaker, Done)
 
   state
 }
@@ -153,7 +148,7 @@ fn handle_text(
   msg: String,
   state: State,
   conn: Connection,
-) -> actor.Next(mailbox.Message, State) {
+) -> Next(ListenerMessage, State) {
   logging.log(Debug, "Received text message: " <> msg)
 
   let event = unknown.from_string(msg)
@@ -177,28 +172,23 @@ fn handle_heartbeat_message(count: Int, state: State, conn: Connection) -> Nil {
   heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
 }
 
-fn handle_unknown_message() -> Nil {
-  logging.log(Warning, "Received an unknown message")
-}
-
 fn handle_user(
-  msg: mailbox.Message,
+  msg: ListenerMessage,
   state: State,
   conn: Connection,
-) -> actor.Next(mailbox.Message, State) {
+) -> Next(ListenerMessage, State) {
   case msg {
-    mailbox.Heartbeat(count) -> handle_heartbeat_message(count, state, conn)
-    _ -> handle_unknown_message()
+    Heartbeat(count) -> handle_heartbeat_message(count, state, conn)
   }
 
   actor.continue(state)
 }
 
 fn loop(
-  msg: Message(mailbox.Message),
+  msg: Message(ListenerMessage),
   state: State,
   conn: Connection,
-) -> actor.Next(mailbox.Message, State) {
+) -> Next(ListenerMessage, State) {
   logging.log(Debug, "Current listener state: " <> string.inspect(state))
 
   case msg {

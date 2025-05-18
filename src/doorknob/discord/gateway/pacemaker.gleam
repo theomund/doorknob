@@ -14,14 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/discord/gateway/mailbox
-import gleam/erlang/process
-import gleam/otp/actor
+import doorknob/discord/gateway/mailbox.{
+  type ListenerMessage, type PacemakerMessage, Done, Heartbeat, Interval,
+}
+import gleam/erlang/process.{type Subject}
+import gleam/otp/actor.{type Next}
 import gleam/string
-import logging.{Debug, Warning}
+import logging.{Debug}
 
 type State {
-  State(count: Int, interval: Int, listener: process.Subject(mailbox.Message))
+  State(count: Int, interval: Int, listener: Subject(ListenerMessage))
 }
 
 fn handle_done_message(state: State) -> State {
@@ -32,7 +34,7 @@ fn handle_done_message(state: State) -> State {
   process.send_after(
     new_state.listener,
     new_state.interval,
-    mailbox.Heartbeat(new_state.count),
+    Heartbeat(new_state.count),
   )
 
   new_state
@@ -46,36 +48,24 @@ fn handle_interval_message(state: State, duration: Int) -> State {
   process.send_after(
     new_state.listener,
     new_state.interval,
-    mailbox.Heartbeat(new_state.count),
+    Heartbeat(new_state.count),
   )
 
   new_state
 }
 
-fn handle_unknown_message(state: State) -> State {
-  logging.log(Warning, "Received unknown message")
-
-  state
-}
-
-fn loop(
-  msg: mailbox.Message,
-  state: State,
-) -> actor.Next(mailbox.Message, State) {
+fn loop(msg: PacemakerMessage, state: State) -> Next(PacemakerMessage, State) {
   logging.log(Debug, "Current pacemaker state: " <> string.inspect(state))
 
   let new_state = case msg {
-    mailbox.Done -> handle_done_message(state)
-    mailbox.Interval(duration) -> handle_interval_message(state, duration)
-    _ -> handle_unknown_message(state)
+    Done -> handle_done_message(state)
+    Interval(duration) -> handle_interval_message(state, duration)
   }
 
   actor.continue(new_state)
 }
 
-pub fn new(
-  listener: process.Subject(mailbox.Message),
-) -> process.Subject(mailbox.Message) {
+pub fn new(listener: Subject(ListenerMessage)) -> Subject(PacemakerMessage) {
   let state = State(count: 1, interval: 0, listener:)
 
   let assert Ok(subject) = actor.start(state, loop)
