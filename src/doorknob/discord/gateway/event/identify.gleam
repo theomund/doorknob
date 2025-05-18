@@ -16,7 +16,7 @@
 
 import gleam/json
 import gleam/string
-import logging
+import logging.{Error as Err, Info}
 import stratus
 
 pub type Properties {
@@ -80,12 +80,12 @@ pub fn send(event: Event, conn: stratus.Connection) -> Nil {
   case response {
     Ok(_) ->
       logging.log(
-        logging.Info,
+        Info,
         "Identify event was successfully sent: " <> string.inspect(masked_event),
       )
     Error(_) ->
       logging.log(
-        logging.Error,
+        Err,
         "Identify event was unsuccessfully sent: "
           <> string.inspect(masked_event),
       )

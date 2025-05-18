@@ -17,7 +17,7 @@
 import gleam/int
 import gleam/json
 import gleam/string
-import logging
+import logging.{Error as Err, Info}
 import stratus
 
 pub type Event {
@@ -42,7 +42,7 @@ pub fn send(event: Event, conn: stratus.Connection, count: Int) -> Nil {
   case response {
     Ok(_) ->
       logging.log(
-        logging.Info,
+        Info,
         "Heartbeat event #"
           <> attempt
           <> " was successfully sent: "
@@ -50,7 +50,7 @@ pub fn send(event: Event, conn: stratus.Connection, count: Int) -> Nil {
       )
     Error(_) ->
       logging.log(
-        logging.Error,
+        Err,
         "Heartbeat event #"
           <> attempt
           <> " was unsuccessfully sent: "

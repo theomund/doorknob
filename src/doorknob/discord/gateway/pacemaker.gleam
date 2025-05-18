@@ -18,14 +18,14 @@ import doorknob/discord/gateway/mailbox
 import gleam/erlang/process
 import gleam/otp/actor
 import gleam/string
-import logging
+import logging.{Debug, Warning}
 
 type State {
   State(count: Int, interval: Int, listener: process.Subject(mailbox.Message))
 }
 
 fn handle_done_message(state: State) -> State {
-  logging.log(logging.Debug, "Received done message")
+  logging.log(Debug, "Received done message")
 
   let new_state = State(..state, count: state.count + 1)
 
@@ -39,7 +39,7 @@ fn handle_done_message(state: State) -> State {
 }
 
 fn handle_interval_message(state: State, duration: Int) -> State {
-  logging.log(logging.Debug, "Received interval message")
+  logging.log(Debug, "Received interval message")
 
   let new_state = State(..state, interval: duration)
 
@@ -53,7 +53,7 @@ fn handle_interval_message(state: State, duration: Int) -> State {
 }
 
 fn handle_unknown_message(state: State) -> State {
-  logging.log(logging.Warning, "Received unknown message")
+  logging.log(Warning, "Received unknown message")
 
   state
 }
@@ -62,10 +62,7 @@ fn loop(
   msg: mailbox.Message,
   state: State,
 ) -> actor.Next(mailbox.Message, State) {
-  logging.log(
-    logging.Debug,
-    "Current pacemaker state: " <> string.inspect(state),
-  )
+  logging.log(Debug, "Current pacemaker state: " <> string.inspect(state))
 
   let new_state = case msg {
     mailbox.Done -> handle_done_message(state)

@@ -16,9 +16,9 @@
 
 import envoy
 import gleam/result
-import logging
+import logging.{Debug}
 
 pub fn token() -> String {
-  logging.log(logging.Debug, "Fetching authentication token")
+  logging.log(Debug, "Fetching authentication token")
   envoy.get("DISCORD_TOKEN") |> result.unwrap("")
 }

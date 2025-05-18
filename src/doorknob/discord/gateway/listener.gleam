@@ -26,10 +26,10 @@ import gleam/bit_array
 import gleam/erlang/process
 import gleam/function
 import gleam/http/request
-import gleam/option
+import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/string
-import logging
+import logging.{Debug, Error, Info, Warning}
 import stratus
 
 type State {
@@ -40,20 +40,20 @@ type State {
   )
 }
 
-fn init() -> #(State, option.Option(process.Selector(mailbox.Message))) {
+fn init() -> #(State, Option(process.Selector(mailbox.Message))) {
   let self = process.new_subject()
 
   let subject = pacemaker.new(self)
 
   let state = State(initialized: False, pacemaker: subject, sequence: 0)
 
-  logging.log(logging.Debug, "Initial state: " <> string.inspect(state))
+  logging.log(Debug, "Initial state: " <> string.inspect(state))
 
   let selector =
     process.new_selector()
     |> process.selecting(self, function.identity)
 
-  #(state, option.Some(selector))
+  #(state, Some(selector))
 }
 
 fn handle_binary(
@@ -62,7 +62,7 @@ fn handle_binary(
 ) -> actor.Next(mailbox.Message, State) {
   let assert Ok(content) = bit_array.to_string(msg)
 
-  logging.log(logging.Debug, "Received binary message: " <> content)
+  logging.log(Debug, "Received binary message: " <> content)
 
   actor.continue(state)
 }
@@ -70,10 +70,7 @@ fn handle_binary(
 fn handle_dispatch_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
-  logging.log(
-    logging.Info,
-    "Received a dispatch event: " <> string.inspect(event),
-  )
+  logging.log(Info, "Received a dispatch event: " <> string.inspect(event))
 
   state
 }
@@ -81,10 +78,7 @@ fn handle_dispatch_event(msg: String, state: State) -> State {
 fn handle_heartbeat_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
-  logging.log(
-    logging.Info,
-    "Received a heartbeat event: " <> string.inspect(event),
-  )
+  logging.log(Info, "Received a heartbeat event: " <> string.inspect(event))
 
   state
 }
@@ -92,10 +86,7 @@ fn handle_heartbeat_event(msg: String, state: State) -> State {
 fn handle_reconnect_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
-  logging.log(
-    logging.Info,
-    "Received a reconnect event: " <> string.inspect(event),
-  )
+  logging.log(Info, "Received a reconnect event: " <> string.inspect(event))
 
   state
 }
@@ -104,7 +95,7 @@ fn handle_invalid_session_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
-    logging.Info,
+    Info,
     "Received an invalid session event: " <> string.inspect(event),
   )
 
@@ -118,7 +109,7 @@ fn handle_hello_event(
 ) -> State {
   let event = hello.from_string(msg)
 
-  logging.log(logging.Info, "Received a hello event: " <> string.inspect(event))
+  logging.log(Info, "Received a hello event: " <> string.inspect(event))
 
   case state.initialized {
     False -> {
@@ -133,7 +124,7 @@ fn handle_hello_event(
       State(..state, initialized: True)
     }
     True -> {
-      logging.log(logging.Debug, "Skipping initialization logic")
+      logging.log(Debug, "Skipping initialization logic")
 
       state
     }
@@ -144,7 +135,7 @@ fn handle_acknowledgement_event(msg: String, state: State) -> State {
   let event = unknown.from_string(msg)
 
   logging.log(
-    logging.Info,
+    Info,
     "Received an acknowledgement event: " <> string.inspect(event),
   )
 
@@ -154,14 +145,11 @@ fn handle_acknowledgement_event(msg: String, state: State) -> State {
 }
 
 fn handle_unknown_event(event: unknown.Event, state: State) -> State {
-  logging.log(
-    logging.Info,
-    "Received an unknown event: " <> string.inspect(event),
-  )
+  logging.log(Info, "Received an unknown event: " <> string.inspect(event))
 
   case unknown.sequence(event) {
-    option.None -> state
-    option.Some(number) -> State(..state, sequence: number)
+    None -> state
+    Some(number) -> State(..state, sequence: number)
   }
 }
 
@@ -170,7 +158,7 @@ fn handle_text(
   state: State,
   conn: stratus.Connection,
 ) -> actor.Next(mailbox.Message, State) {
-  logging.log(logging.Debug, "Received text message: " <> msg)
+  logging.log(Debug, "Received text message: " <> msg)
 
   let event = unknown.from_string(msg)
 
@@ -192,13 +180,13 @@ fn handle_heartbeat_message(
   state: State,
   conn: stratus.Connection,
 ) -> Nil {
-  logging.log(logging.Debug, "Received a heartbeat message")
+  logging.log(Debug, "Received a heartbeat message")
 
   heartbeat.new(state.sequence) |> heartbeat.send(conn, count)
 }
 
 fn handle_unknown_message() -> Nil {
-  logging.log(logging.Warning, "Received an unknown message")
+  logging.log(Warning, "Received an unknown message")
 }
 
 fn handle_user(
@@ -219,10 +207,7 @@ fn loop(
   state: State,
   conn: stratus.Connection,
 ) -> actor.Next(mailbox.Message, State) {
-  logging.log(
-    logging.Debug,
-    "Current listener state: " <> string.inspect(state),
-  )
+  logging.log(Debug, "Current listener state: " <> string.inspect(state))
 
   case msg {
     stratus.Binary(msg) -> handle_binary(msg, state)
@@ -233,13 +218,13 @@ fn loop(
 
 fn on_close(state: State) -> Nil {
   logging.log(
-    logging.Error,
+    Error,
     "Gateway connection was unexpectedly closed: " <> string.inspect(state),
   )
 }
 
 pub fn start() -> Nil {
-  logging.log(logging.Info, "Gateway process started")
+  logging.log(Info, "Gateway process started")
 
   let assert Ok(req) = api.url(10, "json") |> request.to()
 
@@ -263,5 +248,5 @@ pub fn start() -> Nil {
     )
     |> process.select_forever
 
-  logging.log(logging.Info, "Gateway process exited: " <> string.inspect(done))
+  logging.log(Info, "Gateway process exited: " <> string.inspect(done))
 }

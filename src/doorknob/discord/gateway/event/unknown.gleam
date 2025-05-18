@@ -16,25 +16,17 @@
 
 import gleam/dynamic/decode
 import gleam/json
-import gleam/option
+import gleam/option.{type Option, None}
 
 pub type Event {
-  Event(op: Int, s: option.Option(Int), t: option.Option(String))
+  Event(op: Int, s: Option(Int), t: Option(String))
 }
 
 pub fn from_string(encoded: String) -> Event {
   let decoder = {
     use op <- decode.field("op", decode.int)
-    use s <- decode.optional_field(
-      "s",
-      option.None,
-      decode.optional(decode.int),
-    )
-    use t <- decode.optional_field(
-      "t",
-      option.None,
-      decode.optional(decode.string),
-    )
+    use s <- decode.optional_field("s", None, decode.optional(decode.int))
+    use t <- decode.optional_field("t", None, decode.optional(decode.string))
     decode.success(Event(op:, s:, t:))
   }
 
@@ -43,7 +35,7 @@ pub fn from_string(encoded: String) -> Event {
   event
 }
 
-pub fn sequence(event: Event) -> option.Option(Int) {
+pub fn sequence(event: Event) -> Option(Int) {
   event.s
 }
 
