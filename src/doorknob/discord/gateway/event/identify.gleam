@@ -23,18 +23,18 @@ pub type Properties {
   Properties(os: String, browser: String, device: String)
 }
 
-pub type Data {
-  Data(token: String, intents: Int, properties: Properties)
+pub type IdentifyData {
+  IdentifyData(token: String, intents: Int, properties: Properties)
 }
 
-pub type Event {
-  Event(op: Int, d: Data)
+pub type IdentifyEvent {
+  IdentifyEvent(op: Int, d: IdentifyData)
 }
 
-pub fn new(token: String, intents: Int) -> Event {
-  Event(
+pub fn new(token: String, intents: Int) -> IdentifyEvent {
+  IdentifyEvent(
     op: 2,
-    d: Data(
+    d: IdentifyData(
       token:,
       intents:,
       properties: Properties(
@@ -46,7 +46,7 @@ pub fn new(token: String, intents: Int) -> Event {
   )
 }
 
-pub fn to_string(event: Event) -> String {
+pub fn to_string(event: IdentifyEvent) -> String {
   json.to_string(
     json.object([
       #("op", json.int(event.op)),
@@ -69,7 +69,7 @@ pub fn to_string(event: Event) -> String {
   )
 }
 
-pub fn send(event: Event, conn: Connection) -> Nil {
+pub fn send(event: IdentifyEvent, conn: Connection) -> Nil {
   let response = to_string(event) |> stratus.send_text_message(conn, _)
 
   let masked_event =

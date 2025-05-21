@@ -18,16 +18,16 @@ import gleam/dynamic/decode
 import gleam/json
 import gleam/option.{type Option, None}
 
-pub type Event {
-  Event(op: Int, s: Option(Int), t: Option(String))
+pub type UnknownEvent {
+  UnknownEvent(op: Int, s: Option(Int), t: Option(String))
 }
 
-pub fn from_string(encoded: String) -> Event {
+pub fn from_string(encoded: String) -> UnknownEvent {
   let decoder = {
     use op <- decode.field("op", decode.int)
     use s <- decode.optional_field("s", None, decode.optional(decode.int))
     use t <- decode.optional_field("t", None, decode.optional(decode.string))
-    decode.success(Event(op:, s:, t:))
+    decode.success(UnknownEvent(op:, s:, t:))
   }
 
   let assert Ok(event) = json.parse(from: encoded, using: decoder)
@@ -35,10 +35,10 @@ pub fn from_string(encoded: String) -> Event {
   event
 }
 
-pub fn sequence(event: Event) -> Option(Int) {
+pub fn sequence(event: UnknownEvent) -> Option(Int) {
   event.s
 }
 
-pub fn opcode(event: Event) -> Int {
+pub fn opcode(event: UnknownEvent) -> Int {
   event.op
 }

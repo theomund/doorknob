@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/discord/gateway/event/hello
+import doorknob/discord/gateway/event/hello.{HelloData, HelloEvent}
 import gleeunit/should
 
 pub fn from_string_test() -> Nil {
@@ -23,8 +23,8 @@ pub fn from_string_test() -> Nil {
 
   let actual = hello.from_string(encoded)
 
-  let data = hello.Data(heartbeat_interval: 41_250)
-  let expected = hello.Event(op: 10, d: data)
+  let data = HelloData(heartbeat_interval: 41_250)
+  let expected = HelloEvent(op: 10, d: data)
 
   actual |> should.equal(expected)
 }

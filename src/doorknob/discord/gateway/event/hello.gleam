@@ -17,22 +17,22 @@
 import gleam/dynamic/decode
 import gleam/json
 
-pub type Data {
-  Data(heartbeat_interval: Int)
+pub type HelloData {
+  HelloData(heartbeat_interval: Int)
 }
 
-pub type Event {
-  Event(op: Int, d: Data)
+pub type HelloEvent {
+  HelloEvent(op: Int, d: HelloData)
 }
 
-pub fn from_string(encoded: String) -> Event {
+pub fn from_string(encoded: String) -> HelloEvent {
   let decoder = {
     use op <- decode.field("op", decode.int)
     use heartbeat_interval <- decode.subfield(
       ["d", "heartbeat_interval"],
       decode.int,
     )
-    decode.success(Event(op:, d: Data(heartbeat_interval:)))
+    decode.success(HelloEvent(op:, d: HelloData(heartbeat_interval:)))
   }
 
   let assert Ok(event) = json.parse(from: encoded, using: decoder)
@@ -40,6 +40,6 @@ pub fn from_string(encoded: String) -> Event {
   event
 }
 
-pub fn heartbeat_interval(event: Event) -> Int {
+pub fn heartbeat_interval(event: HelloEvent) -> Int {
   event.d.heartbeat_interval
 }

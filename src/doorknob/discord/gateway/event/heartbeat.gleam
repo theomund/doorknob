@@ -20,21 +20,21 @@ import gleam/string
 import logging.{Error as Err, Info}
 import stratus.{type Connection}
 
-pub type Event {
-  Event(op: Int, d: Int)
+pub type HeartbeatEvent {
+  HeartbeatEvent(op: Int, d: Int)
 }
 
-pub fn new(state: Int) -> Event {
-  Event(1, state)
+pub fn new(state: Int) -> HeartbeatEvent {
+  HeartbeatEvent(1, state)
 }
 
-pub fn to_string(event: Event) -> String {
+pub fn to_string(event: HeartbeatEvent) -> String {
   json.to_string(
     json.object([#("op", json.int(event.op)), #("d", json.int(event.d))]),
   )
 }
 
-pub fn send(event: Event, conn: Connection, count: Int) -> Nil {
+pub fn send(event: HeartbeatEvent, conn: Connection, count: Int) -> Nil {
   let response = to_string(event) |> stratus.send_text_message(conn, _)
 
   let attempt = int.to_string(count)

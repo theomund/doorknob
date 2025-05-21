@@ -19,7 +19,7 @@ import doorknob/discord/gateway/api
 import doorknob/discord/gateway/event/heartbeat
 import doorknob/discord/gateway/event/hello
 import doorknob/discord/gateway/event/identify
-import doorknob/discord/gateway/event/unknown
+import doorknob/discord/gateway/event/unknown.{type UnknownEvent}
 import doorknob/discord/gateway/mailbox.{
   type ListenerMessage, type PacemakerMessage, Done, Heartbeat, Interval,
 }
@@ -135,7 +135,7 @@ fn handle_acknowledgement_event(msg: String, state: State) -> State {
   state
 }
 
-fn handle_unknown_event(event: unknown.Event, state: State) -> State {
+fn handle_unknown_event(event: UnknownEvent, state: State) -> State {
   logging.log(Info, "Received an unknown event: " <> string.inspect(event))
 
   case unknown.sequence(event) {
