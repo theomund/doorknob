@@ -14,6 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import gleam/dynamic/decode
+import gleam/json
+
 pub type AcknowledgeEvent {
   AcknowledgeEvent(op: Int)
+}
+
+pub fn from_string(encoded: String) -> AcknowledgeEvent {
+  let decoder = {
+    use op <- decode.field("op", decode.int)
+    decode.success(AcknowledgeEvent(op:))
+  }
+
+  let assert Ok(event) = json.parse(from: encoded, using: decoder)
+
+  event
 }

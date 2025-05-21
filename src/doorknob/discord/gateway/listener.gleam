@@ -16,6 +16,7 @@
 
 import doorknob/discord/authentication
 import doorknob/discord/gateway/api
+import doorknob/discord/gateway/event/acknowledge
 import doorknob/discord/gateway/event/heartbeat
 import doorknob/discord/gateway/event/hello
 import doorknob/discord/gateway/event/identify
@@ -123,7 +124,7 @@ fn handle_hello_event(msg: String, state: State, conn: Connection) -> State {
 }
 
 fn handle_acknowledgement_event(msg: String, state: State) -> State {
-  let event = unknown.from_string(msg)
+  let event = acknowledge.from_string(msg)
 
   logging.log(
     Info,
