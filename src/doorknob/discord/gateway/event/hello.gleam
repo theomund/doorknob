@@ -14,12 +14,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+import gleam/dynamic/decode
+import gleam/json
 
-pub fn main() -> Nil {
-  console.title()
-  logger.setup()
-  listener.start()
+pub type HelloData {
+  HelloData(heartbeat_interval: Int)
+}
+
+pub type HelloEvent {
+  HelloEvent(op: Int, d: HelloData)
+}
+
+pub fn from_string(encoded: String) -> HelloEvent {
+  let decoder = {
+    use op <- decode.field("op", decode.int)
+    use heartbeat_interval <- decode.subfield(
+      ["d", "heartbeat_interval"],
+      decode.int,
+    )
+    decode.success(HelloEvent(op:, d: HelloData(heartbeat_interval:)))
+  }
+
+  let assert Ok(event) = json.parse(from: encoded, using: decoder)
+
+  event
+}
+
+pub fn heartbeat_interval(event: HelloEvent) -> Int {
+  event.d.heartbeat_interval
 }

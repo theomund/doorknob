@@ -14,32 +14,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import doorknob/discord/http/api
 import gleam/dynamic/decode
+import gleam/http/request
+import gleam/httpc
+import gleam/int
 import gleam/json
+import gleam/string
 
-pub type Data {
-  Data(heartbeat_interval: Int)
+type Gateway {
+  Gateway(url: String)
 }
 
-pub type Event {
-  Event(op: Int, d: Data)
-}
+pub fn url(version: Int, encoding: String) -> String {
+  let assert Ok(req) = api.url(10, "/gateway") |> request.to()
 
-pub fn from_string(encoded: String) -> Event {
+  request.set_header(
+    req,
+    "user-agent",
+    "Doorknob (https://github.com/theomund/doorknob, 0.1.0)",
+  )
+
+  let assert Ok(resp) = httpc.send(req)
+
   let decoder = {
-    use op <- decode.field("op", decode.int)
-    use heartbeat_interval <- decode.subfield(
-      ["d", "heartbeat_interval"],
-      decode.int,
-    )
-    decode.success(Event(op:, d: Data(heartbeat_interval:)))
+    use url <- decode.field("url", decode.string)
+    decode.success(Gateway(url:))
   }
 
-  let assert Ok(event) = json.parse(from: encoded, using: decoder)
+  let assert Ok(gateway) = json.parse(from: resp.body, using: decoder)
 
-  event
-}
-
-pub fn heartbeat_interval(event: Event) -> Int {
-  event.d.heartbeat_interval
+  gateway.url
+  |> string.replace(each: "wss", with: "https")
+  <> "?v="
+  <> int.to_string(version)
+  <> "&encoding="
+  <> encoding
 }

@@ -14,12 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+import doorknob/discord/gateway/event/hello.{HelloData, HelloEvent}
+import gleeunit/should
 
-pub fn main() -> Nil {
-  console.title()
-  logger.setup()
-  listener.start()
+pub fn from_string_test() -> Nil {
+  let encoded =
+    "{\"t\":null,\"s\":null,\"op\":10,\"d\":{\"heartbeat_interval\":41250,\"_trace\":[\"[\\\"gateway-prd-us-east1-c-n2nk\\\",{\\\"micros\\\":0.0}]\"]}}"
+
+  let actual = hello.from_string(encoded)
+
+  let data = HelloData(heartbeat_interval: 41_250)
+  let expected = HelloEvent(op: 10, d: data)
+
+  actual |> should.equal(expected)
 }

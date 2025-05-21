@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import gleam/io
+import doorknob/discord/authentication
+import envoy
+import gleeunit/should
 
-pub fn title() -> Nil {
-  io.println("Doorknob v0.1.0")
-  io.println("Copyright (C) 2025 Theomund")
-  io.println("===========================")
+pub fn token_test() -> Nil {
+  envoy.set("DISCORD_TOKEN", "abcdef")
+  authentication.token() |> should.equal("abcdef")
 }

@@ -15,23 +15,26 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import gleam/json
+import gleam/string
+import logging.{Error as Err, Info}
+import stratus.{type Connection}
 
 pub type Properties {
   Properties(os: String, browser: String, device: String)
 }
 
-pub type Data {
-  Data(token: String, intents: Int, properties: Properties)
+pub type IdentifyData {
+  IdentifyData(token: String, intents: Int, properties: Properties)
 }
 
-pub type Event {
-  Event(op: Int, d: Data)
+pub type IdentifyEvent {
+  IdentifyEvent(op: Int, d: IdentifyData)
 }
 
-pub fn new(token: String, intents: Int) -> Event {
-  Event(
+pub fn new(token: String, intents: Int) -> IdentifyEvent {
+  IdentifyEvent(
     op: 2,
-    d: Data(
+    d: IdentifyData(
       token:,
       intents:,
       properties: Properties(
@@ -43,7 +46,7 @@ pub fn new(token: String, intents: Int) -> Event {
   )
 }
 
-pub fn to_string(event: Event) -> String {
+pub fn to_string(event: IdentifyEvent) -> String {
   json.to_string(
     json.object([
       #("op", json.int(event.op)),
@@ -64,4 +67,27 @@ pub fn to_string(event: Event) -> String {
       ),
     ]),
   )
+}
+
+pub fn send(event: IdentifyEvent, conn: Connection) -> Nil {
+  let response = to_string(event) |> stratus.send_text_message(conn, _)
+
+  let masked_event =
+    string.length(event.d.token)
+    |> string.repeat("*", _)
+    |> new(event.d.intents)
+
+  case response {
+    Ok(_) ->
+      logging.log(
+        Info,
+        "Identify event was successfully sent: " <> string.inspect(masked_event),
+      )
+    Error(_) ->
+      logging.log(
+        Err,
+        "Identify event was unsuccessfully sent: "
+          <> string.inspect(masked_event),
+      )
+  }
 }

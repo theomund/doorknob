@@ -14,24 +14,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import discord/event/hello
-import discord/utility
-import envoy
-import gleeunit/should
+import gleam/dynamic/decode
+import gleam/json
+import gleam/option.{type Option, None}
 
-pub fn token_test() -> Nil {
-  envoy.set("DISCORD_TOKEN", "abcdef")
-  utility.token() |> should.equal("abcdef")
+pub type UnknownEvent {
+  UnknownEvent(op: Int, s: Option(Int), t: Option(String))
 }
 
-pub fn hello_decode_test() -> Nil {
-  let encoded =
-    "{\"t\":null,\"s\":null,\"op\":10,\"d\":{\"heartbeat_interval\":41250,\"_trace\":[\"[\\\"gateway-prd-us-east1-c-n2nk\\\",{\\\"micros\\\":0.0}]\"]}}"
+pub fn from_string(encoded: String) -> UnknownEvent {
+  let decoder = {
+    use op <- decode.field("op", decode.int)
+    use s <- decode.optional_field("s", None, decode.optional(decode.int))
+    use t <- decode.optional_field("t", None, decode.optional(decode.string))
+    decode.success(UnknownEvent(op:, s:, t:))
+  }
 
-  let actual = hello.from_string(encoded)
+  let assert Ok(event) = json.parse(from: encoded, using: decoder)
 
-  let data = hello.Data(heartbeat_interval: 41_250)
-  let expected = hello.Event(op: 10, d: data)
+  event
+}
 
-  actual |> should.equal(expected)
+pub fn sequence(event: UnknownEvent) -> Option(Int) {
+  event.s
+}
+
+pub fn opcode(event: UnknownEvent) -> Int {
+  event.op
 }

@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import logging.{Debug}
+import doorknob/discord/http/api
+import gleeunit/should
 
-pub fn setup() -> Nil {
-  logging.configure()
-  logging.set_level(Debug)
+pub fn url_test() -> Nil {
+  api.url(10, "") |> should.equal("https://discord.com/api/v10")
 }

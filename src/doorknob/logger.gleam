@@ -14,6 +14,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub type Event {
-  Event(op: Int)
+import envoy
+import logging.{Debug, Error as Err, Info, Warning}
+
+pub fn setup() -> Nil {
+  logging.configure()
+
+  let level = case envoy.get("LOG_LEVEL") {
+    Error(_) -> {
+      logging.log(Warning, "Couldn't find log level: setting it to INFO")
+      Info
+    }
+    Ok("DEBUG") -> Debug
+    Ok("ERROR") -> Err
+    Ok("INFO") -> Info
+    Ok("WARN") -> Warning
+    Ok(_) -> {
+      logging.log(Err, "Couldn't parse log level: setting it to INFO")
+      Info
+    }
+  }
+
+  logging.set_level(level)
 }

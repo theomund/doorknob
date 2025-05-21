@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import doorknob/console
-import doorknob/discord/gateway/listener
-import doorknob/logger
+pub type ListenerMessage {
+  Heartbeat(count: Int)
+}
 
-pub fn main() -> Nil {
-  console.title()
-  logger.setup()
-  listener.start()
+pub type PacemakerMessage {
+  Done
+  Interval(duration: Int)
 }
