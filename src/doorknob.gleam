@@ -19,7 +19,7 @@ import doorknob/discord/gateway/listener
 import doorknob/logger
 
 pub fn main() -> Nil {
-  logger.setup()
   console.title()
+  logger.setup()
   listener.start()
 }
