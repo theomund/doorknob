@@ -14,21 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob do
-  @moduledoc """
-  Documentation for `Doorknob`.
-  """
+defmodule Doorknob.Application do
+  use Application
 
-  @doc """
-  Hello world.
+  require Logger
 
-  ## Examples
+  def start(_type, _args) do
+    Logger.info("Starting the application.")
 
-      iex> Doorknob.hello()
-      :world
-
-  """
-  def hello do
-    :world
+    children = []
+    Supervisor.start_link(children, strategy: :one_for_one)
   end
 end
