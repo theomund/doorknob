@@ -26,6 +26,7 @@ RUN dnf copr enable -y theomund/copr \
     hadolint-2.12.0 \
     just-1.40.0 \
     vale-3.11.2 \
+    which-2.23 \
     yamllint-1.37.0 \
     && dnf clean all
 RUN useradd -m developer
