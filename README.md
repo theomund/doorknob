@@ -1,6 +1,9 @@
 # Doorknob
 
+![Build](https://img.shields.io/github/actions/workflow/status/theomund/doorknob/linux.yml?style=for-the-badge&logo=linux&logoColor=white)
 ![License](https://img.shields.io/github/license/theomund/doorknob?style=for-the-badge&logo=gnu&logoColor=white&color=mediumorchid)
+![Toolchain](https://img.shields.io/badge/toolchain-1.18.3-darkorchid?style=for-the-badge&logo=elixir&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.1.0-blue?style=for-the-badge&logo=github&logoColor=white)
 
 Artificial intelligence companion written in Elixir.
 
