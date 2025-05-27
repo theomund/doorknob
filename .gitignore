@@ -16,6 +16,7 @@
 
 *.ez
 /_build/
+/.vale/
 /cover/
 /deps/
 /doc/
