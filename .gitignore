@@ -16,6 +16,7 @@
 
 *.ez
 /_build/
+/.elixir_ls/
 /.vale/
 /cover/
 /deps/
