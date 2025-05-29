@@ -43,7 +43,11 @@ format-mix:
     mix format
 
 # Lint the project source code.
-lint: lint-vale lint-yamllint
+lint: lint-credo lint-vale lint-yamllint
+
+# Run the Elixir linter.
+lint-credo:
+    mix credo
 
 # Run the prose linter.
 lint-vale:

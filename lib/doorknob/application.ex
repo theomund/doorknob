@@ -15,14 +15,20 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Doorknob.Application do
+  @moduledoc """
+  The main application module.
+  """
+
   use Application
 
   require Logger
 
+  alias Doorknob.Discord.Gateway.Listener
+
   def start(_type, _args) do
     Logger.info("Starting the application.")
 
-    children = []
+    children = [{Listener, []}]
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end

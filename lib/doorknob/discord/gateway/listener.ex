@@ -14,30 +14,39 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.MixProject do
-  use Mix.Project
+defmodule Doorknob.Discord.Gateway.Listener do
+  @moduledoc """
+  The listener for the Discord Gateway API.
+  """
 
-  def project do
-    [
-      app: :doorknob,
-      version: "0.1.0",
-      elixir: "~> 1.18.3",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
-    ]
+  require Logger
+
+  use GenServer
+
+  defstruct [:pid, :protocol, :stream]
+
+  @impl true
+  def init(_opts) do
+    opts = %{
+      protocols: [:http]
+    }
+
+    {:ok, pid} = :gun.open(:binary.bin_to_list("gateway.discord.gg"), 443, opts)
+    {:ok, protocol} = :gun.await_up(pid)
+    stream = :gun.ws_upgrade(pid, :binary.bin_to_list("/?v=10&encoding=json"))
+
+    state = %{pid: pid, protocol: protocol, stream: stream}
+
+    {:ok, state}
   end
 
-  def application do
-    [
-      extra_applications: [:logger],
-      mod: {Doorknob.Application, []}
-    ]
+  @impl true
+  def handle_info(msg, state) do
+    Logger.debug("Received message: #{inspect(msg)}")
+    {:noreply, state}
   end
 
-  defp deps do
-    [
-      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:gun, "~> 2.2.0"}
-    ]
+  def start_link(_args) do
+    GenServer.start_link(__MODULE__, [])
   end
 end
