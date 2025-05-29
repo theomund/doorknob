@@ -35,6 +35,9 @@ defmodule Doorknob.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
+      {:mint_web_socket, "~> 1.0.4"}
+    ]
   end
 end
