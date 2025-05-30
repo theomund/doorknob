@@ -19,6 +19,8 @@ defmodule Doorknob.Discord.Gateway.Listener do
   The listener for the Discord Gateway API.
   """
 
+  alias Doorknob.Discord.Gateway.API
+
   require Logger
 
   use GenServer
@@ -33,13 +35,26 @@ defmodule Doorknob.Discord.Gateway.Listener do
       protocols: [:http]
     }
 
-    {:ok, pid} = :gun.open(:binary.bin_to_list("gateway.discord.gg"), 443, opts)
+    host = API.host()
+    path = API.path()
+
+    {:ok, pid} = :gun.open(host, 443, opts)
     {:ok, protocol} = :gun.await_up(pid)
-    ref = :gun.ws_upgrade(pid, :binary.bin_to_list("/?v=10&encoding=json"))
+    ref = :gun.ws_upgrade(pid, path)
 
     state = %__MODULE__{interval: 0, pid: pid, protocol: protocol, ref: ref}
 
     {:ok, state}
+  end
+
+  @impl true
+  def handle_info({:gun_upgrade, pid, ref, ["websocket"], _headers}, state) do
+    state = put_in(state.pid, pid)
+    state = put_in(state.ref, ref)
+
+    Logger.info("Successfully started Gateway API listener.")
+
+    {:noreply, state}
   end
 
   @impl true
