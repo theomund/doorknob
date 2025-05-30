@@ -42,61 +42,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, state}
   end
 
-  defp heartbeat(state) do
-    Process.sleep(state.interval)
-
-    encoded = JSON.encode!(%{op: 1, d: 0})
-    :gun.ws_send(state.pid, state.ref, {:text, encoded})
-
-    Logger.info("Sent heartbeat event.")
-
-    state
-  end
-
-  defp identify(state) do
-    encoded =
-      JSON.encode!(%{
-        op: 2,
-        d: %{
-          token: System.get_env("DISCORD_TOKEN"),
-          intents: 513,
-          properties: %{os: "linux", browser: "doorknob", device: "doorknob"}
-        }
-      })
-
-    :gun.ws_send(state.pid, state.ref, {:text, encoded})
-
-    Logger.info("Sent identify event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 0, "t" => type}, state) do
-    Logger.info("Received dispatch event: #{inspect(type)}.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 10, "d" => data}, state) do
-    Logger.info("Received hello event.")
-
-    state = put_in(state.interval, data["heartbeat_interval"])
-    state = identify(state)
-    heartbeat(state)
-  end
-
-  defp handle_event(%{"op" => 11}, state) do
-    Logger.info("Received heartbeat acknowledgement event.")
-
-    heartbeat(state)
-  end
-
-  defp handle_event(event, state) do
-    Logger.warning("Received unhandled event: #{inspect(event)}.")
-
-    state
-  end
-
   @impl true
   def handle_info({:gun_ws, pid, ref, {:text, data}}, state) do
     state = put_in(state.pid, pid)
@@ -117,6 +62,78 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.debug("Received message: #{inspect(msg)}.")
 
     {:noreply, state}
+  end
+
+  defp handle_event(%{"op" => 0, "t" => type}, state) do
+    Logger.info("Received dispatch event: #{inspect(type)}.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 1}, state) do
+    Logger.warning("Received heartbeat event.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 7}, state) do
+    Logger.warning("Received reconnect event.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 9}, state) do
+    Logger.warning("Received invalid session event.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 10, "d" => data}, state) do
+    Logger.info("Received hello event.")
+
+    state = put_in(state.interval, data["heartbeat_interval"])
+
+    identify(state)
+    heartbeat(state)
+
+    state
+  end
+
+  defp handle_event(%{"op" => 11}, state) do
+    Logger.info("Received heartbeat acknowledgement event.")
+
+    heartbeat(state)
+
+    state
+  end
+
+  defp handle_event(event, state) do
+    Logger.warning("Received unhandled event: #{inspect(event)}.")
+
+    state
+  end
+
+  defp heartbeat(state) do
+    encoded = JSON.encode!(%{op: 1, d: 0})
+    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+
+    Logger.info("Sent heartbeat event.")
+  end
+
+  defp identify(state) do
+    encoded =
+      JSON.encode!(%{
+        op: 2,
+        d: %{
+          token: System.get_env("DISCORD_TOKEN"),
+          intents: 513,
+          properties: %{os: "linux", browser: "doorknob", device: "doorknob"}
+        }
+      })
+
+    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+
+    Logger.info("Sent identify event.")
   end
 
   def start_link(_args) do
