@@ -26,7 +26,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
   defstruct [:pid, :protocol, :stream]
 
   @impl true
-  def init(_opts) do
+  def init(_args) do
     opts = %{
       protocols: [:http]
     }
@@ -40,9 +40,31 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, state}
   end
 
+  defp heartbeat(pid, ref, state) do
+    Process.sleep(5000)
+
+    encoded = JSON.encode!(%{op: 1, d: 0})
+    :gun.ws_send(pid, ref, {:text, encoded})
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:gun_ws, pid, ref, {:text, data}}, state) do
+    Logger.debug("Received text frame: #{inspect(data)}")
+
+    {:ok, decoded} = JSON.decode(data)
+    Logger.debug("Decoded data: #{inspect(decoded)}")
+
+    heartbeat(pid, ref, state)
+
+    {:noreply, state}
+  end
+
   @impl true
   def handle_info(msg, state) do
     Logger.debug("Received message: #{inspect(msg)}")
+
     {:noreply, state}
   end
 
