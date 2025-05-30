@@ -23,47 +23,98 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   use GenServer
 
-  defstruct [:pid, :protocol, :stream]
+  defstruct [:interval, :pid, :protocol, :ref]
 
   @impl true
   def init(_args) do
+    Logger.info("Starting Discord Gateway API listener.")
+
     opts = %{
       protocols: [:http]
     }
 
     {:ok, pid} = :gun.open(:binary.bin_to_list("gateway.discord.gg"), 443, opts)
     {:ok, protocol} = :gun.await_up(pid)
-    stream = :gun.ws_upgrade(pid, :binary.bin_to_list("/?v=10&encoding=json"))
+    ref = :gun.ws_upgrade(pid, :binary.bin_to_list("/?v=10&encoding=json"))
 
-    state = %{pid: pid, protocol: protocol, stream: stream}
+    state = %__MODULE__{interval: 0, pid: pid, protocol: protocol, ref: ref}
 
     {:ok, state}
   end
 
-  defp heartbeat(pid, ref, state) do
-    Process.sleep(5000)
+  defp heartbeat(state) do
+    Process.sleep(state.interval)
 
     encoded = JSON.encode!(%{op: 1, d: 0})
-    :gun.ws_send(pid, ref, {:text, encoded})
+    :gun.ws_send(state.pid, state.ref, {:text, encoded})
 
-    {:noreply, state}
+    Logger.info("Sent heartbeat event.")
+
+    state
+  end
+
+  defp identify(state) do
+    encoded =
+      JSON.encode!(%{
+        op: 2,
+        d: %{
+          token: System.get_env("DISCORD_TOKEN"),
+          intents: 513,
+          properties: %{os: "linux", browser: "doorknob", device: "doorknob"}
+        }
+      })
+
+    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+
+    Logger.info("Sent identify event.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 0, "t" => type}, state) do
+    Logger.info("Received dispatch event: #{inspect(type)}.")
+
+    state
+  end
+
+  defp handle_event(%{"op" => 10, "d" => data}, state) do
+    Logger.info("Received hello event.")
+
+    state = put_in(state.interval, data["heartbeat_interval"])
+    state = identify(state)
+    heartbeat(state)
+  end
+
+  defp handle_event(%{"op" => 11}, state) do
+    Logger.info("Received heartbeat acknowledgement event.")
+
+    heartbeat(state)
+  end
+
+  defp handle_event(event, state) do
+    Logger.warning("Received unhandled event: #{inspect(event)}.")
+
+    state
   end
 
   @impl true
   def handle_info({:gun_ws, pid, ref, {:text, data}}, state) do
-    Logger.debug("Received text frame: #{inspect(data)}")
+    state = put_in(state.pid, pid)
+    state = put_in(state.ref, ref)
+
+    Logger.debug("Received text frame: #{inspect(data)}.")
 
     {:ok, decoded} = JSON.decode(data)
-    Logger.debug("Decoded data: #{inspect(decoded)}")
+    Logger.debug("Decoded data: #{inspect(decoded)}.")
 
-    heartbeat(pid, ref, state)
+    state = handle_event(decoded, state)
 
     {:noreply, state}
   end
 
   @impl true
   def handle_info(msg, state) do
-    Logger.debug("Received message: #{inspect(msg)}")
+    Logger.debug("Received message: #{inspect(msg)}.")
 
     {:noreply, state}
   end

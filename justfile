@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+set dotenv-load := true
+
 # Run all CI/CD stages.
 all: lint test build
 
