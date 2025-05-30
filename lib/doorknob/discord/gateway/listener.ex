@@ -58,6 +58,16 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
+  def handle_info(:heartbeat, state) do
+    encoded = JSON.encode!(%{op: 1, d: 0})
+    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+
+    Logger.info("Sent heartbeat event.")
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(msg, state) do
     Logger.debug("Received message: #{inspect(msg)}.")
 
@@ -94,7 +104,8 @@ defmodule Doorknob.Discord.Gateway.Listener do
     state = put_in(state.interval, data["heartbeat_interval"])
 
     identify(state)
-    heartbeat(state)
+
+    Process.send_after(self(), :heartbeat, state.interval)
 
     state
   end
@@ -102,7 +113,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
   defp handle_event(%{"op" => 11}, state) do
     Logger.info("Received heartbeat acknowledgement event.")
 
-    heartbeat(state)
+    Process.send_after(self(), :heartbeat, state.interval)
 
     state
   end
@@ -111,13 +122,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.warning("Received unhandled event: #{inspect(event)}.")
 
     state
-  end
-
-  defp heartbeat(state) do
-    encoded = JSON.encode!(%{op: 1, d: 0})
-    :gun.ws_send(state.pid, state.ref, {:text, encoded})
-
-    Logger.info("Sent heartbeat event.")
   end
 
   defp identify(state) do
