@@ -48,7 +48,7 @@ format-mix:
 lint: lint-credo lint-vale lint-yamllint
 
 # Run the Elixir linter.
-lint-credo:
+lint-credo: setup-mix
     mix credo
 
 # Run the prose linter.
