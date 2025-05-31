@@ -15,6 +15,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 defmodule Doorknob.Discord.Gateway.API do
+  @moduledoc """
+  Convenience functions for the Discord Gateway API.
+  """
+
   @url "wss://gateway.discord.gg/?v=10&encoding=json"
 
   def host() do

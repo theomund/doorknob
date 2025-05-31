@@ -14,20 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-FROM quay.io/fedora/fedora:42
-RUN sed -i '/tsflags=nodocs/d' /etc/dnf/dnf.conf
-RUN dnf copr enable -y theomund/copr \
-    && dnf install -y \
-    bash-completion-2.16 \
-    elixir-1.18.4 \
-    erlang-26.2.5.12 \
-    gawk-5.3.1 \
-    git-2.49.0 \
-    hadolint-2.12.0 \
-    just-1.40.0 \
-    vale-3.11.2 \
-    which-2.23 \
-    yamllint-1.37.1 \
-    && dnf clean all
-RUN useradd -m developer
-USER developer
+defmodule Doorknob.Discord.HTTP.Message do
+  @moduledoc """
+  The message resource handlers.
+  """
+
+  alias Doorknob.Discord.HTTP.Listener
+  alias Doorknob.Discord.HTTP.API
+
+  def create(content, channel_id) do
+    path = API.path("/channels/#{channel_id}/messages")
+    headers = API.headers()
+    body = JSON.encode!(%{content: content})
+
+    GenServer.cast(Listener, {:post, path, headers, body})
+
+    :ok
+  end
+end

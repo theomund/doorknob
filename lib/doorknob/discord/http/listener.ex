@@ -14,29 +14,47 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Discord.HTTP.API do
+defmodule Doorknob.Discord.HTTP.Listener do
   @moduledoc """
-  Convenience functions for the Discord HTTP API.
+  The listener for the Discord HTTP API.
   """
 
-  @url "https://discord.com/api/v10"
+  alias Doorknob.Discord.HTTP.API
 
-  def headers() do
-    token = System.get_env("DISCORD_TOKEN")
-    [{"authorization", "Bot #{token}"}, {"content-type", "application/json"}]
+  require Logger
+
+  use GenServer
+
+  defstruct [:pid]
+
+  @impl true
+  def init(_args) do
+    Logger.info("Starting Discord HTTP API listener.")
+
+    host = API.host()
+
+    {:ok, pid} = :gun.open(host, 443)
+    {:ok, :http2} = :gun.await_up(pid)
+
+    state = %__MODULE__{pid: pid}
+
+    {:ok, state}
   end
 
-  def host() do
-    uri = uri()
-    :binary.bin_to_list(uri.host)
+  @impl true
+  def handle_info(msg, state) do
+    Logger.debug("Received HTTP message: #{inspect(msg)}.")
+
+    {:noreply, state}
   end
 
-  def path(subpath) do
-    uri = uri()
-    :binary.bin_to_list(uri.path <> subpath)
+  @impl true
+  def handle_cast({:post, path, headers, body}, state) do
+    :gun.post(state.pid, path, headers, body)
+    {:noreply, state}
   end
 
-  defp uri() do
-    URI.parse(@url)
+  def start_link(_args) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 end

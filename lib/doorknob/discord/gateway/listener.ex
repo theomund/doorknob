@@ -19,13 +19,14 @@ defmodule Doorknob.Discord.Gateway.Listener do
   The listener for the Discord Gateway API.
   """
 
+  alias Doorknob.Discord.HTTP.Message
   alias Doorknob.Discord.Gateway.API
 
   require Logger
 
   use GenServer
 
-  defstruct [:interval, :pid, :protocol, :ref]
+  defstruct [:interval, :pid, :ref]
 
   @impl true
   def init(_args) do
@@ -39,10 +40,10 @@ defmodule Doorknob.Discord.Gateway.Listener do
     path = API.path()
 
     {:ok, pid} = :gun.open(host, 443, opts)
-    {:ok, protocol} = :gun.await_up(pid)
+    {:ok, :http} = :gun.await_up(pid)
     ref = :gun.ws_upgrade(pid, path)
 
-    state = %__MODULE__{interval: 0, pid: pid, protocol: protocol, ref: ref}
+    state = %__MODULE__{interval: 0, pid: pid, ref: ref}
 
     {:ok, state}
   end
@@ -84,9 +85,26 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   @impl true
   def handle_info(msg, state) do
-    Logger.debug("Received message: #{inspect(msg)}.")
+    Logger.debug("Received Gateway message: #{inspect(msg)}.")
 
     {:noreply, state}
+  end
+
+  defp handle_event(
+         %{
+           "op" => 0,
+           "d" => %{"author" => %{"username" => username}, "channel_id" => channel_id},
+           "t" => "MESSAGE_CREATE"
+         },
+         state
+       ) do
+    Logger.info("Received message create event.")
+
+    if username == "theomund" do
+      :ok = Message.create("Message received.", channel_id)
+    end
+
+    state
   end
 
   defp handle_event(%{"op" => 0, "t" => type}, state) do
@@ -156,6 +174,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   def start_link(_args) do
-    GenServer.start_link(__MODULE__, [])
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 end

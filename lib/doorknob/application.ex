@@ -19,7 +19,8 @@ defmodule Doorknob.Application do
   The main application module.
   """
 
-  alias Doorknob.Discord.Gateway.Listener
+  alias Doorknob.Discord.Gateway
+  alias Doorknob.Discord.HTTP
 
   require Logger
 
@@ -28,7 +29,7 @@ defmodule Doorknob.Application do
   def start(_type, _args) do
     Logger.info("Starting the application.")
 
-    children = [{Listener, []}]
+    children = [{Gateway.Listener, []}, {HTTP.Listener, []}]
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end
