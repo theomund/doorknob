@@ -3,28 +3,30 @@ defmodule Doorknob.Discord.Gateway.Event do
   Convenience functions for creating Discord Gateway API events.
   """
 
+  alias Doorknob.Discord.Gateway.Listener
+
   require Logger
 
-  def heartbeat(state) do
+  def heartbeat() do
     encoded = JSON.encode!(%{op: 1, d: 0})
 
-    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+    GenServer.cast(Listener, {:send, {:text, encoded}})
 
     Logger.info("Sent heartbeat event.")
   end
 
-  def identify(state) do
+  def identify(token) do
     encoded =
       JSON.encode!(%{
         op: 2,
         d: %{
-          token: state.token,
-          intents: 513,
+          token: token,
+          intents: 33_409,
           properties: %{os: "linux", browser: "doorknob", device: "doorknob"}
         }
       })
 
-    :gun.ws_send(state.pid, state.ref, {:text, encoded})
+    GenServer.cast(Listener, {:send, {:text, encoded}})
 
     Logger.info("Sent identify event.")
   end

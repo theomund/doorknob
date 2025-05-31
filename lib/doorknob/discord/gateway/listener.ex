@@ -19,9 +19,9 @@ defmodule Doorknob.Discord.Gateway.Listener do
   The listener for the Discord Gateway API.
   """
 
-  alias Doorknob.Discord.HTTP.Message
   alias Doorknob.Discord.Gateway.API
   alias Doorknob.Discord.Gateway.Event
+  alias Doorknob.Discord.HTTP.Command
 
   require Logger
 
@@ -51,11 +51,18 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
+  def handle_cast({:send, frame}, state) do
+    :gun.ws_send(state.pid, state.ref, frame)
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info({:gun_upgrade, pid, ref, ["websocket"], _headers}, state) do
     state = put_in(state.pid, pid)
     state = put_in(state.ref, ref)
 
-    Logger.info("Successfully started Gateway API listener.")
+    Logger.info("Successfully started Discord Gateway API listener.")
 
     {:noreply, state}
   end
@@ -77,7 +84,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   @impl true
   def handle_info(:heartbeat, state) do
-    Event.heartbeat(state)
+    Event.heartbeat()
 
     {:noreply, state}
   end
@@ -89,10 +96,20 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:noreply, state}
   end
 
+  defp handle_event(%{"op" => 0, "t" => "INTERACTION_CREATE"}, state) do
+    Logger.info("Received interaction create event.")
+
+    state
+  end
+
   defp handle_event(
          %{
            "op" => 0,
-           "d" => %{"author" => %{"id" => author_id}, "channel_id" => channel_id},
+           "d" => %{
+             "author" => %{"id" => author_id},
+             "channel_id" => channel_id,
+             "content" => content
+           },
            "t" => "MESSAGE_CREATE"
          },
          state
@@ -100,7 +117,11 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.info("Received message create event.")
 
     if author_id != state.id do
-      :ok = Message.create("Message received.", channel_id)
+      case content do
+        "!ping" -> Command.ping(channel_id)
+        "!uptime" -> Command.uptime(channel_id)
+        _ -> :ignore
+      end
     end
 
     state
@@ -109,14 +130,16 @@ defmodule Doorknob.Discord.Gateway.Listener do
   defp handle_event(
          %{
            "op" => 0,
-           "d" => %{"application" => %{"id" => id}},
+           "d" => %{"application" => %{"id" => application_id}},
            "t" => "READY"
          },
          state
        ) do
     Logger.info("Received ready event.")
 
-    state = put_in(state.id, id)
+    state = put_in(state.id, application_id)
+
+    :ok = Command.register(state.id)
 
     state
   end
@@ -150,7 +173,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     state = put_in(state.interval, data["heartbeat_interval"])
 
-    Event.identify(state)
+    Event.identify(state.token)
 
     Process.send_after(self(), :heartbeat, state.interval)
 
