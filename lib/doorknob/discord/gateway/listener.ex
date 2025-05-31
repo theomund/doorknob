@@ -39,8 +39,9 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     host = API.host()
     path = API.path()
+    port = API.port()
 
-    {:ok, pid} = :gun.open(host, 443, opts)
+    {:ok, pid} = :gun.open(host, port, opts)
     {:ok, :http} = :gun.await_up(pid)
     ref = :gun.ws_upgrade(pid, path)
 

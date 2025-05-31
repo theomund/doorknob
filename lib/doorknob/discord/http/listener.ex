@@ -32,8 +32,9 @@ defmodule Doorknob.Discord.HTTP.Listener do
     Logger.info("Starting Discord HTTP API listener.")
 
     host = API.host()
+    port = API.port()
 
-    {:ok, pid} = :gun.open(host, 443)
+    {:ok, pid} = :gun.open(host, port)
     {:ok, :http2} = :gun.await_up(pid)
 
     state = %__MODULE__{pid: pid, token: args.token}

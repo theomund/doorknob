@@ -39,6 +39,10 @@ defmodule Doorknob.Discord.HTTP.API do
     :binary.bin_to_list(uri.path <> subpath)
   end
 
+  def port() do
+    443
+  end
+
   defp uri() do
     URI.parse(@url)
   end

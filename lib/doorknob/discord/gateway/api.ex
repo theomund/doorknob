@@ -31,6 +31,10 @@ defmodule Doorknob.Discord.Gateway.API do
     :binary.bin_to_list(uri.path <> "?" <> uri.query)
   end
 
+  def port() do
+    443
+  end
+
   defp uri() do
     URI.parse(@url)
   end
