@@ -14,30 +14,28 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Application do
+defmodule Doorknob.Discord.Gateway.API do
   @moduledoc """
-  The main application module.
+  Convenience functions for the Discord Gateway API.
   """
 
-  alias Doorknob.Discord.Gateway
-  alias Doorknob.Discord.HTTP
+  @url "wss://gateway.discord.gg/?v=10&encoding=json"
 
-  require Logger
+  def host() do
+    uri = uri()
+    :binary.bin_to_list(uri.host)
+  end
 
-  use Application
+  def path() do
+    uri = uri()
+    :binary.bin_to_list(uri.path <> "?" <> uri.query)
+  end
 
-  def start(_type, _args) do
-    Logger.info("Starting the application.")
+  def port() do
+    443
+  end
 
-    args = %{
-      token: Application.get_env(:doorknob, :token)
-    }
-
-    children = [
-      {Gateway.Listener, args},
-      {HTTP.Listener, args}
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one)
+  defp uri() do
+    URI.parse(@url)
   end
 end

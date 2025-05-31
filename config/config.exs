@@ -14,30 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Application do
-  @moduledoc """
-  The main application module.
-  """
+import Config
 
-  alias Doorknob.Discord.Gateway
-  alias Doorknob.Discord.HTTP
+config :doorknob,
+  token: System.get_env("DISCORD_TOKEN")
 
-  require Logger
-
-  use Application
-
-  def start(_type, _args) do
-    Logger.info("Starting the application.")
-
-    args = %{
-      token: Application.get_env(:doorknob, :token)
-    }
-
-    children = [
-      {Gateway.Listener, args},
-      {HTTP.Listener, args}
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one)
-  end
-end
+config :logger,
+  level: :debug

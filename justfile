@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+set dotenv-load := true
+
 # Run all CI/CD stages.
 all: lint test build
 
@@ -21,7 +23,7 @@ all: lint test build
 build: build-mix
 
 # Build the Elixir source code.
-build-mix:
+build-mix: setup-mix
     mix compile
 
 # Clean the project source tree.
@@ -29,7 +31,7 @@ clean: clean-mix clean-vale
 
 # Clean the Elixir build files.
 clean-mix:
-    mix clean
+    mix clean --deps
 
 # Clean the Vale data files.
 clean-vale:
@@ -43,7 +45,11 @@ format-mix:
     mix format
 
 # Lint the project source code.
-lint: lint-vale lint-yamllint
+lint: lint-credo lint-vale lint-yamllint
+
+# Run the Elixir linter.
+lint-credo: setup-mix
+    mix credo
 
 # Run the prose linter.
 lint-vale:
@@ -58,12 +64,19 @@ lint-yamllint:
 run: run-mix
 
 # Run the Elixir application.
-run-mix:
+run-mix: setup-mix
     mix run --no-halt
+
+# Setup the project.
+setup: setup-mix
+
+# Setup the Elixir dependencies.
+setup-mix:
+    mix deps.get
 
 # Run the project test suite.
 test: test-mix
 
 # Test the Elixir source code.
-test-mix:
+test-mix: setup-mix
     mix test

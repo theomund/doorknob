@@ -19,7 +19,7 @@ RUN sed -i '/tsflags=nodocs/d' /etc/dnf/dnf.conf
 RUN dnf copr enable -y theomund/copr \
     && dnf install -y \
     bash-completion-2.16 \
-    elixir-1.18.3 \
+    elixir-1.18.4 \
     erlang-26.2.5.12 \
     gawk-5.3.1 \
     git-2.49.0 \
@@ -27,7 +27,7 @@ RUN dnf copr enable -y theomund/copr \
     just-1.40.0 \
     vale-3.11.2 \
     which-2.23 \
-    yamllint-1.37.0 \
+    yamllint-1.37.1 \
     && dnf clean all
 RUN useradd -m developer
 USER developer

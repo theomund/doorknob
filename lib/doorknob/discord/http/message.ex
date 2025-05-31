@@ -14,30 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Application do
+defmodule Doorknob.Discord.HTTP.Message do
   @moduledoc """
-  The main application module.
+  Convenience functions for creating Message resource requests.
   """
 
-  alias Doorknob.Discord.Gateway
-  alias Doorknob.Discord.HTTP
+  alias Doorknob.Discord.HTTP.Listener
+  alias Doorknob.Discord.HTTP.API
 
-  require Logger
+  def create(content, channel_id) do
+    path = API.path("/channels/#{channel_id}/messages")
+    body = JSON.encode!(%{content: content})
 
-  use Application
+    GenServer.cast(Listener, {:post, path, body})
 
-  def start(_type, _args) do
-    Logger.info("Starting the application.")
-
-    args = %{
-      token: Application.get_env(:doorknob, :token)
-    }
-
-    children = [
-      {Gateway.Listener, args},
-      {HTTP.Listener, args}
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one)
+    :ok
   end
 end
