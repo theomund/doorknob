@@ -27,7 +27,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   use GenServer
 
-  defstruct [:interval, :pid, :ref, :token]
+  defstruct [:id, :interval, :pid, :ref, :token]
 
   @impl true
   def init(args) do
@@ -44,7 +44,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, :http} = :gun.await_up(pid)
     ref = :gun.ws_upgrade(pid, path)
 
-    state = %__MODULE__{interval: 0, pid: pid, ref: ref, token: args.token}
+    state = %__MODULE__{pid: pid, ref: ref, token: args.token}
 
     {:ok, state}
   end
@@ -91,16 +91,31 @@ defmodule Doorknob.Discord.Gateway.Listener do
   defp handle_event(
          %{
            "op" => 0,
-           "d" => %{"author" => %{"username" => username}, "channel_id" => channel_id},
+           "d" => %{"author" => %{"id" => author_id}, "channel_id" => channel_id},
            "t" => "MESSAGE_CREATE"
          },
          state
        ) do
     Logger.info("Received message create event.")
 
-    if username == "theomund" do
+    if author_id != state.id do
       :ok = Message.create("Message received.", channel_id)
     end
+
+    state
+  end
+
+  defp handle_event(
+         %{
+           "op" => 0,
+           "d" => %{"application" => %{"id" => id}},
+           "t" => "READY"
+         },
+         state
+       ) do
+    Logger.info("Received ready event.")
+
+    state = put_in(state.id, id)
 
     state
   end
