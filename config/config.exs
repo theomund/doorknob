@@ -16,5 +16,8 @@
 
 import Config
 
+config :doorknob,
+  token: System.get_env("DISCORD_TOKEN")
+
 config :logger,
   level: :debug

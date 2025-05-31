@@ -25,10 +25,10 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   use GenServer
 
-  defstruct [:pid]
+  defstruct [:pid, :token]
 
   @impl true
-  def init(_args) do
+  def init(args) do
     Logger.info("Starting Discord HTTP API listener.")
 
     host = API.host()
@@ -36,7 +36,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
     {:ok, pid} = :gun.open(host, 443)
     {:ok, :http2} = :gun.await_up(pid)
 
-    state = %__MODULE__{pid: pid}
+    state = %__MODULE__{pid: pid, token: args.token}
 
     {:ok, state}
   end
@@ -54,7 +54,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
     {:noreply, state}
   end
 
-  def start_link(_args) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 end

@@ -27,10 +27,10 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   use GenServer
 
-  defstruct [:interval, :pid, :ref]
+  defstruct [:interval, :pid, :ref, :token]
 
   @impl true
-  def init(_args) do
+  def init(args) do
     Logger.info("Starting Discord Gateway API listener.")
 
     opts = %{
@@ -44,7 +44,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, :http} = :gun.await_up(pid)
     ref = :gun.ws_upgrade(pid, path)
 
-    state = %__MODULE__{interval: 0, pid: pid, ref: ref}
+    state = %__MODULE__{interval: 0, pid: pid, ref: ref, token: args.token}
 
     {:ok, state}
   end
@@ -99,7 +99,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.info("Received message create event.")
 
     if username == "theomund" do
-      :ok = Message.create("Message received.", channel_id)
+      :ok = Message.create("Message received.", channel_id, state)
     end
 
     state
@@ -155,7 +155,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     state
   end
 
-  def start_link(_args) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end
 end

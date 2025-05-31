@@ -29,7 +29,9 @@ defmodule Doorknob.Application do
   def start(_type, _args) do
     Logger.info("Starting the application.")
 
-    children = [{Gateway.Listener, []}, {HTTP.Listener, []}]
+    args = %{token: Application.get_env(:doorknob, :token)}
+
+    children = [{Gateway.Listener, args}, {HTTP.Listener, args}]
     Supervisor.start_link(children, strategy: :one_for_one)
   end
 end

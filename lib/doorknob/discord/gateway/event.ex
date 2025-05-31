@@ -18,7 +18,7 @@ defmodule Doorknob.Discord.Gateway.Event do
       JSON.encode!(%{
         op: 2,
         d: %{
-          token: System.get_env("DISCORD_TOKEN"),
+          token: state.token,
           intents: 513,
           properties: %{os: "linux", browser: "doorknob", device: "doorknob"}
         }

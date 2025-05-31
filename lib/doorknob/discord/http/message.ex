@@ -22,9 +22,9 @@ defmodule Doorknob.Discord.HTTP.Message do
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.API
 
-  def create(content, channel_id) do
+  def create(content, channel_id, state) do
     path = API.path("/channels/#{channel_id}/messages")
-    headers = API.headers()
+    headers = API.headers(state)
     body = JSON.encode!(%{content: content})
 
     GenServer.cast(Listener, {:post, path, headers, body})
