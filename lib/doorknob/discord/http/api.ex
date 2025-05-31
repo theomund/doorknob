@@ -22,7 +22,11 @@ defmodule Doorknob.Discord.HTTP.API do
   @url "https://discord.com/api/v10"
 
   def headers(state) do
-    [{"authorization", "Bot #{state.token}"}, {"content-type", "application/json"}]
+    [
+      {"authorization", "Bot #{state.token}"},
+      {"content-type", "application/json"},
+      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
+    ]
   end
 
   def host() do

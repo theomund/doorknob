@@ -99,7 +99,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.info("Received message create event.")
 
     if username == "theomund" do
-      :ok = Message.create("Message received.", channel_id, state)
+      :ok = Message.create("Message received.", channel_id)
     end
 
     state
