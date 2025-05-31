@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Message do
   @moduledoc """
-  The message resource handlers.
+  Convenience functions for creating Message resource requests.
   """
 
   alias Doorknob.Discord.HTTP.Listener
