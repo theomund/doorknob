@@ -130,7 +130,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
   defp handle_event(
          %{
            "op" => 0,
-           "d" => %{"application" => %{"id" => application_id}},
+           "d" => %{"application" => %{"id" => application_id}, "guilds" => guilds},
            "t" => "READY"
          },
          state
@@ -139,7 +139,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     state = put_in(state.id, application_id)
 
-    :ok = Command.register(state.id)
+    :ok = Command.register(state.id, guilds)
 
     state
   end

@@ -23,9 +23,10 @@ defmodule Doorknob.Discord.HTTP.Command do
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.Message
 
-  def register(application_id) do
+  def register(application_id, guilds) do
     register_global(application_id)
-    register_guild(application_id, "1284554342514561175")
+
+    Enum.each(guilds, fn guild -> register_guild(application_id, guild["id"]) end)
   end
 
   defp register_global(application_id) do
@@ -37,8 +38,12 @@ defmodule Doorknob.Discord.HTTP.Command do
 
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
+
+    ping = %{name: "ping", description: "Get a simple diagnostic response."}
     uptime = %{name: "uptime", description: "Get the uptime of the bot."}
-    body = JSON.encode!([uptime])
+    commands = [ping, uptime]
+
+    body = JSON.encode!(commands)
 
     GenServer.cast(Listener, {:put, path, body})
   end
