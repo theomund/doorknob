@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Message do
   @moduledoc """
-  Convenience functions for handling messages.
+  Functions for handling messages.
   """
 
   alias Doorknob.Discord.HTTP.API

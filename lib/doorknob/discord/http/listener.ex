@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Listener do
   @moduledoc """
-  The listener for the Discord HTTP API.
+  Listener for the Discord HTTP API.
   """
 
   alias Doorknob.Discord.HTTP.API

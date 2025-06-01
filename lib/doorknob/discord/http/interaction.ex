@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Interaction do
   @moduledoc """
-  Convenience functions for handling interactions.
+  Functions for handling interactions.
   """
 
   alias Doorknob.Discord.HTTP.API
@@ -30,8 +30,15 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     content =
       case name do
+        "deafen" -> Command.deafen()
+        "join" -> Command.join()
+        "leave" -> Command.leave()
+        "mute" -> Command.mute()
         "ping" -> Command.ping()
+        "undeafen" -> Command.undeafen()
+        "unmute" -> Command.unmute()
         "uptime" -> Command.uptime()
+        _ -> Logger.warning("Interaction has no handler.")
       end
 
     body = JSON.encode!(%{type: 4, data: %{content: content}})

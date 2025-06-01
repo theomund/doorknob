@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.Gateway.Listener do
   @moduledoc """
-  The listener for the Discord Gateway API.
+  Listener for the Discord Gateway API.
   """
 
   alias Doorknob.Discord.Gateway.API

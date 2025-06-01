@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Command do
   @moduledoc """
-  Convenience functions for handling commands.
+  Functions for handling commands.
   """
 
   alias Doorknob.Discord.HTTP.API
@@ -42,9 +42,16 @@ defmodule Doorknob.Discord.HTTP.Command do
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
 
-    ping = %{name: "ping", description: "Get a simple diagnostic response."}
-    uptime = %{name: "uptime", description: "Get the uptime of the bot."}
-    commands = [ping, uptime]
+    deafen = %{name: "deafen", description: "Deafen the bot."}
+    join = %{name: "join", description: "Force the bot to join the call."}
+    leave = %{name: "leave", description: "Force the bot to leave the call."}
+    mute = %{name: "mute", description: "Mute the bot."}
+    ping = %{name: "ping", description: "Receive a simple diagnostic response."}
+    undeafen = %{name: "undeafen", description: "Undeafen the bot."}
+    unmute = %{name: "unmute", description: "Unmute the bot."}
+    uptime = %{name: "uptime", description: "Receive the uptime of the bot."}
+
+    commands = [deafen, join, leave, mute, ping, undeafen, unmute, uptime]
 
     body = JSON.encode!(commands)
 
@@ -53,10 +60,46 @@ defmodule Doorknob.Discord.HTTP.Command do
     GenServer.cast(Listener, {:put, path, body})
   end
 
+  def deafen() do
+    Logger.debug("Handling deafen command.")
+
+    ":ear_with_hearing_aid: **Doorknob has been deafened.**"
+  end
+
+  def join() do
+    Logger.debug("Handling join command.")
+
+    ":wave: **Doorknob has joined the call.**"
+  end
+
+  def leave() do
+    Logger.debug("Handling leave command.")
+
+    ":door: **Doorknob has left the call.**"
+  end
+
+  def mute() do
+    Logger.debug("Handling mute command.")
+
+    ":mute: **Doorknob has been muted.**"
+  end
+
   def ping() do
     Logger.debug("Handling ping command.")
 
     ":white_check_mark: **Doorknob is online.**"
+  end
+
+  def undeafen() do
+    Logger.debug("Handling undeafen command.")
+
+    ":ear: **Doorknob has been undeafened.**"
+  end
+
+  def unmute() do
+    Logger.debug("Handling unmute command.")
+
+    ":speaker: **Doorknob has been unmuted.**"
   end
 
   def uptime() do
