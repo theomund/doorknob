@@ -16,12 +16,13 @@
 
 defmodule Doorknob.Discord.HTTP.Command do
   @moduledoc """
-  Convenience functions for creating Command resource requests.
+  Convenience functions for handling commands.
   """
 
   alias Doorknob.Discord.HTTP.API
   alias Doorknob.Discord.HTTP.Listener
-  alias Doorknob.Discord.HTTP.Message
+
+  require Logger
 
   def register(application_id, guilds) do
     register_global(application_id)
@@ -32,6 +33,8 @@ defmodule Doorknob.Discord.HTTP.Command do
   defp register_global(application_id) do
     path = API.path("/applications/#{application_id}/commands")
     body = JSON.encode!([])
+
+    Logger.debug("Registering global commands: #{body}.")
 
     GenServer.cast(Listener, {:put, path, body})
   end
@@ -45,19 +48,22 @@ defmodule Doorknob.Discord.HTTP.Command do
 
     body = JSON.encode!(commands)
 
+    Logger.debug("Registering guild commands: #{body}")
+
     GenServer.cast(Listener, {:put, path, body})
   end
 
-  def ping(channel_id) do
-    Message.create(channel_id, ":white_check_mark: **Doorknob is online.**")
+  def ping() do
+    Logger.debug("Handling ping command.")
+
+    ":white_check_mark: **Doorknob is online.**"
   end
 
-  def uptime(channel_id) do
+  def uptime() do
+    Logger.debug("Handling uptime command.")
+
     {uptime, _} = :erlang.statistics(:wall_clock)
 
-    Message.create(
-      channel_id,
-      ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"
-    )
+    ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"
   end
 end

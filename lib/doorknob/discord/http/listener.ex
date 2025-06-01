@@ -58,7 +58,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
     :gun.post(state.pid, path, headers, body)
 
     Logger.debug(
-      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})"
+      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
 
     {:noreply, state}
@@ -71,7 +71,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
     :gun.put(state.pid, path, headers, body)
 
     Logger.debug(
-      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})"
+      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
 
     {:noreply, state}

@@ -21,7 +21,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   alias Doorknob.Discord.Gateway.API
   alias Doorknob.Discord.Gateway.Event
-  alias Doorknob.Discord.HTTP.Command
 
   require Logger
 
@@ -54,6 +53,8 @@ defmodule Doorknob.Discord.Gateway.Listener do
   def handle_cast({:send, frame}, state) do
     :gun.ws_send(state.pid, state.ref, frame)
 
+    Logger.debug("Sent frame: #{inspect(frame)}")
+
     {:noreply, state}
   end
 
@@ -77,7 +78,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, decoded} = JSON.decode(data)
     Logger.debug("Decoded data: #{inspect(decoded)}.")
 
-    state = handle_event(decoded, state)
+    state = Event.handle(decoded, state)
 
     {:noreply, state}
   end
@@ -94,104 +95,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.debug("Received Gateway message: #{inspect(msg)}.")
 
     {:noreply, state}
-  end
-
-  defp handle_event(%{"op" => 0, "t" => "INTERACTION_CREATE"}, state) do
-    Logger.info("Received interaction create event.")
-
-    state
-  end
-
-  defp handle_event(
-         %{
-           "op" => 0,
-           "d" => %{
-             "author" => %{"id" => author_id},
-             "channel_id" => channel_id,
-             "content" => content
-           },
-           "t" => "MESSAGE_CREATE"
-         },
-         state
-       ) do
-    Logger.info("Received message create event.")
-
-    if author_id != state.id do
-      case content do
-        "!ping" -> Command.ping(channel_id)
-        "!uptime" -> Command.uptime(channel_id)
-        _ -> :ignore
-      end
-    end
-
-    state
-  end
-
-  defp handle_event(
-         %{
-           "op" => 0,
-           "d" => %{"application" => %{"id" => application_id}, "guilds" => guilds},
-           "t" => "READY"
-         },
-         state
-       ) do
-    Logger.info("Received ready event.")
-
-    state = put_in(state.id, application_id)
-
-    :ok = Command.register(state.id, guilds)
-
-    state
-  end
-
-  defp handle_event(%{"op" => 0, "t" => type}, state) do
-    Logger.info("Received dispatch event: #{inspect(type)}.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 1}, state) do
-    Logger.warning("Received heartbeat event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 7}, state) do
-    Logger.warning("Received reconnect event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 9}, state) do
-    Logger.warning("Received invalid session event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 10, "d" => data}, state) do
-    Logger.info("Received hello event.")
-
-    state = put_in(state.interval, data["heartbeat_interval"])
-
-    Event.identify(state.token)
-
-    Process.send_after(self(), :heartbeat, state.interval)
-
-    state
-  end
-
-  defp handle_event(%{"op" => 11}, state) do
-    Logger.info("Received heartbeat acknowledgement event.")
-
-    Process.send_after(self(), :heartbeat, state.interval)
-
-    state
-  end
-
-  defp handle_event(event, state) do
-    Logger.warning("Received unhandled event: #{inspect(event)}.")
-
-    state
   end
 
   def start_link(args) do

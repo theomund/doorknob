@@ -14,21 +14,29 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Discord.HTTP.Message do
+defmodule Doorknob.Discord.HTTP.Interaction do
   @moduledoc """
-  Convenience functions for handling messages.
+  Convenience functions for handling interactions.
   """
 
   alias Doorknob.Discord.HTTP.API
+  alias Doorknob.Discord.HTTP.Command
   alias Doorknob.Discord.HTTP.Listener
 
   require Logger
 
-  def create(channel_id, content) do
-    path = API.path("/channels/#{channel_id}/messages")
-    body = JSON.encode!(%{content: content})
+  def respond(id, name, token) do
+    path = API.path("/interactions/#{id}/#{token}/callback")
 
-    Logger.debug("Created message: #{body}.")
+    content =
+      case name do
+        "ping" -> Command.ping()
+        "uptime" -> Command.uptime()
+      end
+
+    body = JSON.encode!(%{type: 4, data: %{content: content}})
+
+    Logger.debug("Sending interaction response: #{body}.")
 
     GenServer.cast(Listener, {:post, path, body})
   end
