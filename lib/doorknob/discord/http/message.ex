@@ -16,18 +16,20 @@
 
 defmodule Doorknob.Discord.HTTP.Message do
   @moduledoc """
-  Convenience functions for creating Message resource requests.
+  Functions for handling messages.
   """
 
-  alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.API
+  alias Doorknob.Discord.HTTP.Listener
 
-  def create(content, channel_id) do
+  require Logger
+
+  def create(channel_id, content) do
     path = API.path("/channels/#{channel_id}/messages")
     body = JSON.encode!(%{content: content})
 
-    GenServer.cast(Listener, {:post, path, body})
+    Logger.debug("Created message: #{body}.")
 
-    :ok
+    GenServer.cast(Listener, {:post, path, body})
   end
 end

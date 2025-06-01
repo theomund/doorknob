@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.Gateway.API do
   @moduledoc """
-  Convenience functions for the Discord Gateway API.
+  Functions for the Discord Gateway API.
   """
 
   @url "wss://gateway.discord.gg/?v=10&encoding=json"

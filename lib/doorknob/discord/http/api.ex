@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.API do
   @moduledoc """
-  Convenience functions for the Discord HTTP API.
+  Functions for the Discord HTTP API.
   """
 
   @url "https://discord.com/api/v10"

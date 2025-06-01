@@ -14,30 +14,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.MixProject do
-  use Mix.Project
+defmodule Doorknob.Discord.HTTP.Interaction do
+  @moduledoc """
+  Functions for handling interactions.
+  """
 
-  def project do
-    [
-      app: :doorknob,
-      version: "0.1.0",
-      elixir: "~> 1.18.4",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
-    ]
-  end
+  alias Doorknob.Discord.HTTP.API
+  alias Doorknob.Discord.HTTP.Command
+  alias Doorknob.Discord.HTTP.Listener
 
-  def application do
-    [
-      extra_applications: [:logger],
-      mod: {Doorknob.Application, []}
-    ]
-  end
+  require Logger
 
-  defp deps do
-    [
-      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:gun, "~> 2.2.0"}
-    ]
+  def respond(id, name, token) do
+    path = API.path("/interactions/#{id}/#{token}/callback")
+
+    content = Command.handle(name)
+
+    body = JSON.encode!(%{type: 4, data: %{content: content}})
+
+    Logger.debug("Sending interaction response: #{body}.")
+
+    GenServer.cast(Listener, {:post, path, body})
   end
 end

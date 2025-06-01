@@ -16,7 +16,7 @@
 
 defmodule Doorknob.Discord.HTTP.Listener do
   @moduledoc """
-  The listener for the Discord HTTP API.
+  Listener for the Discord HTTP API.
   """
 
   alias Doorknob.Discord.HTTP.API
@@ -39,7 +39,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
     state = %__MODULE__{pid: pid, token: args.token}
 
-    Logger.info("Successfully started HTTP API listener.")
+    Logger.info("Successfully started Discord HTTP API listener.")
 
     {:ok, state}
   end
@@ -56,6 +56,23 @@ defmodule Doorknob.Discord.HTTP.Listener do
     headers = API.headers(state)
 
     :gun.post(state.pid, path, headers, body)
+
+    Logger.debug(
+      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+    )
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:put, path, body}, state) do
+    headers = API.headers(state)
+
+    :gun.put(state.pid, path, headers, body)
+
+    Logger.debug(
+      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+    )
 
     {:noreply, state}
   end

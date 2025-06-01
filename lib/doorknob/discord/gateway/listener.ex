@@ -16,10 +16,9 @@
 
 defmodule Doorknob.Discord.Gateway.Listener do
   @moduledoc """
-  The listener for the Discord Gateway API.
+  Listener for the Discord Gateway API.
   """
 
-  alias Doorknob.Discord.HTTP.Message
   alias Doorknob.Discord.Gateway.API
   alias Doorknob.Discord.Gateway.Event
 
@@ -51,11 +50,20 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
+  def handle_cast({:send, frame}, state) do
+    :gun.ws_send(state.pid, state.ref, frame)
+
+    Logger.debug("Sent frame: #{inspect(frame)}")
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info({:gun_upgrade, pid, ref, ["websocket"], _headers}, state) do
     state = put_in(state.pid, pid)
     state = put_in(state.ref, ref)
 
-    Logger.info("Successfully started Gateway API listener.")
+    Logger.info("Successfully started Discord Gateway API listener.")
 
     {:noreply, state}
   end
@@ -70,14 +78,14 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:ok, decoded} = JSON.decode(data)
     Logger.debug("Decoded data: #{inspect(decoded)}.")
 
-    state = handle_event(decoded, state)
+    state = Event.handle(decoded, state)
 
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:heartbeat, state) do
-    Event.heartbeat(state)
+    Event.heartbeat()
 
     {:noreply, state}
   end
@@ -87,88 +95,6 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.debug("Received Gateway message: #{inspect(msg)}.")
 
     {:noreply, state}
-  end
-
-  defp handle_event(
-         %{
-           "op" => 0,
-           "d" => %{"author" => %{"id" => author_id}, "channel_id" => channel_id},
-           "t" => "MESSAGE_CREATE"
-         },
-         state
-       ) do
-    Logger.info("Received message create event.")
-
-    if author_id != state.id do
-      :ok = Message.create("Message received.", channel_id)
-    end
-
-    state
-  end
-
-  defp handle_event(
-         %{
-           "op" => 0,
-           "d" => %{"application" => %{"id" => id}},
-           "t" => "READY"
-         },
-         state
-       ) do
-    Logger.info("Received ready event.")
-
-    state = put_in(state.id, id)
-
-    state
-  end
-
-  defp handle_event(%{"op" => 0, "t" => type}, state) do
-    Logger.info("Received dispatch event: #{inspect(type)}.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 1}, state) do
-    Logger.warning("Received heartbeat event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 7}, state) do
-    Logger.warning("Received reconnect event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 9}, state) do
-    Logger.warning("Received invalid session event.")
-
-    state
-  end
-
-  defp handle_event(%{"op" => 10, "d" => data}, state) do
-    Logger.info("Received hello event.")
-
-    state = put_in(state.interval, data["heartbeat_interval"])
-
-    Event.identify(state)
-
-    Process.send_after(self(), :heartbeat, state.interval)
-
-    state
-  end
-
-  defp handle_event(%{"op" => 11}, state) do
-    Logger.info("Received heartbeat acknowledgement event.")
-
-    Process.send_after(self(), :heartbeat, state.interval)
-
-    state
-  end
-
-  defp handle_event(event, state) do
-    Logger.warning("Received unhandled event: #{inspect(event)}.")
-
-    state
   end
 
   def start_link(args) do
