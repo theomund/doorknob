@@ -28,14 +28,30 @@ defmodule Doorknob.Discord.Gateway.Event do
   def handle(
         %{
           "op" => 0,
-          "d" => %{"data" => %{"name" => name}, "id" => id, "token" => token},
+          "d" => %{
+            "data" => %{"name" => name},
+            "channel_id" => channel_id,
+            "guild_id" => guild_id,
+            "id" => id,
+            "member" => %{"user" => %{"id" => user_id}},
+            "token" => token
+          },
           "t" => "INTERACTION_CREATE"
         },
         state
       ) do
     Logger.info("Received interaction create event.")
 
-    Interaction.respond(id, name, token)
+    context = %{
+      name: name,
+      channel_id: channel_id,
+      guild_id: guild_id,
+      id: id,
+      token: token,
+      user_id: user_id
+    }
+
+    Interaction.respond(context)
 
     state
   end
@@ -135,5 +151,22 @@ defmodule Doorknob.Discord.Gateway.Event do
     GenServer.cast(Listener, {:send, {:text, encoded}})
 
     Logger.info("Sent identify event.")
+  end
+
+  def update_voice_state(channel_id, guild_id, self_deaf, self_mute) do
+    encoded =
+      JSON.encode!(%{
+        op: 4,
+        d: %{
+          channel_id: channel_id,
+          guild_id: guild_id,
+          self_deaf: self_deaf,
+          self_mute: self_mute
+        }
+      })
+
+    GenServer.cast(Listener, {:send, {:text, encoded}})
+
+    Logger.info("Sent voice state update.")
   end
 end

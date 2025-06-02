@@ -24,62 +24,6 @@ defmodule Doorknob.Discord.HTTP.Command do
 
   require Logger
 
-  def handle("deafen") do
-    Logger.debug("Handling deafen command.")
-
-    ":ear_with_hearing_aid: **Doorknob has been deafened.**"
-  end
-
-  def handle("join") do
-    Logger.debug("Handling join command.")
-
-    ":wave: **Doorknob has joined the call.**"
-  end
-
-  def handle("leave") do
-    Logger.debug("Handling leave command.")
-
-    ":door: **Doorknob has left the call.**"
-  end
-
-  def handle("mute") do
-    Logger.debug("Handling mute command.")
-
-    ":mute: **Doorknob has been muted.**"
-  end
-
-  def handle("ping") do
-    Logger.debug("Handling ping command.")
-
-    ":white_check_mark: **Doorknob is online.**"
-  end
-
-  def handle("undeafen") do
-    Logger.debug("Handling undeafen command.")
-
-    ":ear: **Doorknob has been undeafened.**"
-  end
-
-  def handle("unmute") do
-    Logger.debug("Handling unmute command.")
-
-    ":speaker: **Doorknob has been unmuted.**"
-  end
-
-  def handle("uptime") do
-    Logger.debug("Handling uptime command.")
-
-    {uptime, _} = :erlang.statistics(:wall_clock)
-
-    ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"
-  end
-
-  def handle(name) do
-    Logger.warning("Handling unimplemented command: '#{name}'.")
-
-    ":warning: **Doorknob can't handle this command yet.**"
-  end
-
   def register(application_id, guilds) do
     register_global(application_id)
 
