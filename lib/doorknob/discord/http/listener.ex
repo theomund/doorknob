@@ -45,10 +45,18 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_info(msg, state) do
-    Logger.debug("Received HTTP message: #{inspect(msg)}.")
+  def handle_call({:get, path}, _from, state) do
+    headers = API.headers(state)
 
-    {:noreply, state}
+    ref = :gun.get(state.pid, path, headers)
+
+    Logger.debug("Sent GET request: (path: #{path}, headers: #{inspect(headers)}).")
+
+    {:ok, body} = :gun.await_body(state.pid, ref)
+
+    {:ok, decoded} = JSON.decode(body)
+
+    {:reply, decoded, state}
   end
 
   @impl true
@@ -73,6 +81,13 @@ defmodule Doorknob.Discord.HTTP.Listener do
     Logger.debug(
       "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
     {:noreply, state}
   end
