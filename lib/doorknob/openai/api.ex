@@ -14,31 +14,36 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Application do
+defmodule Doorknob.OpenAI.API do
   @moduledoc """
-  The main application module.
+  Functions for the OpenAI API.
   """
 
-  alias Doorknob.Discord.Gateway
-  alias Doorknob.Discord.HTTP
-  alias Doorknob.OpenAI
+  @url "https://api.openai.com/v1"
 
-  require Logger
-
-  use Application
-
-  def start(_type, _args) do
-    Logger.info("Starting the application.")
-
-    key = Application.get_env(:doorknob, :key)
-    token = Application.get_env(:doorknob, :token)
-
-    children = [
-      {Gateway.Listener, %{token: token}},
-      {HTTP.Listener, %{token: token}},
-      {OpenAI.Listener, %{key: key}}
+  def headers(state) do
+    [
+      {"authorization", "Bearer #{state.key}"},
+      {"content-type", "application/json"},
+      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
     ]
+  end
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+  def host() do
+    uri = uri()
+    :binary.bin_to_list(uri.host)
+  end
+
+  def path(subpath) do
+    uri = uri()
+    :binary.bin_to_list(uri.path <> subpath)
+  end
+
+  def port() do
+    443
+  end
+
+  defp uri() do
+    URI.parse(@url)
   end
 end

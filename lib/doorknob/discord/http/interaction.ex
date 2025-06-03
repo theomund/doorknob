@@ -23,6 +23,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   alias Doorknob.Discord.HTTP.API
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.Voice
+  alias Doorknob.OpenAI.Chat
 
   require Logger
 
@@ -36,6 +37,17 @@ defmodule Doorknob.Discord.HTTP.Interaction do
     Logger.debug("Sending interaction response: #{body}.")
 
     GenServer.cast(Listener, {:post, path, body})
+  end
+
+  defp handle(%{name: "chat"} = context) do
+    Logger.debug("Handling chat command.")
+
+    message =
+      Enum.find_value(context.options, fn %{"name" => "message", "value" => value} -> value end)
+
+    {:ok, text} = Chat.create(message)
+
+    ":speaking_head: **Doorknob responded:**\n\n*#{text}*"
   end
 
   defp handle(%{name: "deafen"} = context) do

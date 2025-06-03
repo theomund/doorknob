@@ -14,31 +14,29 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Application do
+defmodule Doorknob.OpenAI.Chat do
   @moduledoc """
-  The main application module.
+  Functions for handling chats.
   """
 
-  alias Doorknob.Discord.Gateway
-  alias Doorknob.Discord.HTTP
-  alias Doorknob.OpenAI
+  alias Doorknob.OpenAI.API
+  alias Doorknob.OpenAI.Listener
 
   require Logger
 
-  use Application
+  def create(message) do
+    path = API.path("/responses")
 
-  def start(_type, _args) do
-    Logger.info("Starting the application.")
+    body = JSON.encode!(%{input: message, model: "gpt-4o", store: false})
 
-    key = Application.get_env(:doorknob, :key)
-    token = Application.get_env(:doorknob, :token)
+    Logger.debug("Created chat request: #{body}.")
 
-    children = [
-      {Gateway.Listener, %{token: token}},
-      {HTTP.Listener, %{token: token}},
-      {OpenAI.Listener, %{key: key}}
-    ]
+    response = GenServer.call(Listener, {:post, path, body})
 
-    Supervisor.start_link(children, strategy: :one_for_one)
+    Logger.debug("Received chat response: #{inspect(response)}")
+
+    text = get_in(response, ["output", Access.at(0), "content", Access.at(0), "text"])
+
+    {:ok, text}
   end
 end
