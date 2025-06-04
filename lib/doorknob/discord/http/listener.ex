@@ -73,6 +73,19 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
+  def handle_cast({:patch, path, body}, state) do
+    headers = API.headers(state)
+
+    :gun.patch(state.pid, path, headers, body)
+
+    Logger.debug(
+      "Sent PATCH request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+    )
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_cast({:put, path, body}, state) do
     headers = API.headers(state)
 

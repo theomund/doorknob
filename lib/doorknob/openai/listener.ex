@@ -47,13 +47,11 @@ defmodule Doorknob.OpenAI.Listener do
   @impl true
   def handle_call({:get, path}, _from, state) do
     headers = API.headers(state)
-
     ref = :gun.get(state.pid, path, headers)
 
     Logger.debug("Sent GET request: (path: #{path}, headers: #{inspect(headers)}).")
 
     {:ok, body} = :gun.await_body(state.pid, ref)
-
     {:ok, decoded} = JSON.decode(body)
 
     {:reply, decoded, state}
@@ -62,15 +60,15 @@ defmodule Doorknob.OpenAI.Listener do
   @impl true
   def handle_call({:post, path, body}, _from, state) do
     headers = API.headers(state)
-
     ref = :gun.post(state.pid, path, headers, body)
 
     Logger.debug(
       "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
 
-    {:ok, body} = :gun.await_body(state.pid, ref)
+    timeout = API.timeout()
 
+    {:ok, body} = :gun.await_body(state.pid, ref, timeout)
     {:ok, decoded} = JSON.decode(body)
 
     {:reply, decoded, state}

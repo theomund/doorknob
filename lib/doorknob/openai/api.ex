@@ -43,6 +43,10 @@ defmodule Doorknob.OpenAI.API do
     443
   end
 
+  def timeout() do
+    30_000
+  end
+
   defp uri() do
     URI.parse(@url)
   end

@@ -29,6 +29,7 @@ defmodule Doorknob.Discord.Gateway.Event do
         %{
           "op" => 0,
           "d" => %{
+            "application_id" => application_id,
             "data" => %{"name" => name, "options" => options},
             "channel_id" => channel_id,
             "guild_id" => guild_id,
@@ -44,6 +45,7 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     context = %{
       name: name,
+      application_id: application_id,
       channel_id: channel_id,
       guild_id: guild_id,
       id: id,
