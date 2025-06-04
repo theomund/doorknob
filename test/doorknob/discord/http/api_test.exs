@@ -14,10 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Discord.HTTP.APITest do
+defmodule Doorknob.Discord.HTTP.API.Test do
   alias Doorknob.Discord.HTTP.API
 
   use ExUnit.Case
+
+  test "Headers" do
+    state = %{token: "foo"}
+
+    actual = API.headers(state)
+
+    expected = [
+      {"authorization", "Bot foo"},
+      {"content-type", "application/json"},
+      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
+    ]
+
+    assert actual == expected
+  end
 
   test "Port Number" do
     assert API.port() == 443

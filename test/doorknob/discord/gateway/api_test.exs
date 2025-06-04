@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Discord.Gateway.APITest do
-  alias Doorknob.Discord.HTTP.API
+defmodule Doorknob.Discord.Gateway.API.Test do
+  alias Doorknob.Discord.Gateway.API
 
   use ExUnit.Case
 
