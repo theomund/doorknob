@@ -25,7 +25,7 @@ defmodule Doorknob.OpenAI.Listener do
 
   use GenServer
 
-  defstruct [:key, :pid]
+  defstruct [:context, :key, :pid]
 
   @impl true
   def init(args) do
@@ -37,7 +37,9 @@ defmodule Doorknob.OpenAI.Listener do
     {:ok, pid} = :gun.open(host, port)
     {:ok, :http2} = :gun.await_up(pid)
 
-    state = %__MODULE__{key: args.key, pid: pid}
+    context = [%{role: "developer", content: args.prompt}]
+
+    state = %__MODULE__{context: context, key: args.key, pid: pid}
 
     Logger.info("Successfully started OpenAI API listener.")
 
@@ -72,6 +74,15 @@ defmodule Doorknob.OpenAI.Listener do
     {:ok, decoded} = JSON.decode(body)
 
     {:reply, decoded, state}
+  end
+
+  @impl true
+  def handle_call({:update_context, message}, _from, state) do
+    state = put_in(state.context, state.context ++ [message])
+
+    Logger.debug("Updated context: #{inspect(state.context)}")
+
+    {:reply, state.context, state}
   end
 
   @impl true

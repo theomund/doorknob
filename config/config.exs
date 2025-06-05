@@ -18,6 +18,7 @@ import Config
 
 config :doorknob,
   key: System.get_env("OPENAI_KEY"),
+  prompt: System.get_env("PROMPT"),
   token: System.get_env("DISCORD_TOKEN")
 
 config :logger,

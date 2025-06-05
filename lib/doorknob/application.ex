@@ -31,12 +31,13 @@ defmodule Doorknob.Application do
     Logger.info("Starting the application.")
 
     key = Application.get_env(:doorknob, :key)
+    prompt = Application.get_env(:doorknob, :prompt)
     token = Application.get_env(:doorknob, :token)
 
     children = [
       {Gateway.Listener, %{token: token}},
       {HTTP.Listener, %{token: token}},
-      {OpenAI.Listener, %{key: key}}
+      {OpenAI.Listener, %{key: key, prompt: prompt}}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)

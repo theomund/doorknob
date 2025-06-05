@@ -26,7 +26,9 @@ defmodule Doorknob.OpenAI.Chat do
 
   def create(message) do
     path = API.path("/responses")
-    body = JSON.encode!(%{input: message, model: "gpt-4o", store: false})
+
+    context = GenServer.call(Listener, {:update_context, %{role: "user", content: message}})
+    body = JSON.encode!(%{input: context, model: "gpt-4o", store: false})
 
     Logger.debug("Created chat request: #{body}.")
 
@@ -36,6 +38,7 @@ defmodule Doorknob.OpenAI.Chat do
     Logger.debug("Received chat response: #{inspect(response)}")
 
     text = get_in(response, ["output", Access.at(0), "content", Access.at(0), "text"])
+    GenServer.call(Listener, {:update_context, %{role: "assistant", content: text}})
 
     {:ok, text}
   end
