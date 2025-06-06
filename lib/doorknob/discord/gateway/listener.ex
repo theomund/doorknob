@@ -33,7 +33,8 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.info("Starting Discord Gateway API listener.")
 
     opts = %{
-      protocols: [:http]
+      protocols: [:http],
+      retry: 0
     }
 
     host = API.host()
