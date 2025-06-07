@@ -42,29 +42,28 @@ defmodule Doorknob.Discord.HTTP.Command do
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
 
-    chat = %{
-      name: "chat",
-      description: "Chat with the bot.",
-      options: [%{name: "message", description: "The message to send.", required: true, type: 3}]
-    }
-
-    deafen = %{name: "deafen", description: "Deafen the bot."}
-
-    image = %{
-      name: "image",
-      description: "Generate an image.",
-      options: [%{name: "prompt", description: "The prompt to send.", required: true, type: 3}]
-    }
-
-    join = %{name: "join", description: "Force the bot to join the call."}
-    leave = %{name: "leave", description: "Force the bot to leave the call."}
-    mute = %{name: "mute", description: "Mute the bot."}
-    ping = %{name: "ping", description: "Receive a simple diagnostic response."}
-    undeafen = %{name: "undeafen", description: "Undeafen the bot."}
-    unmute = %{name: "unmute", description: "Unmute the bot."}
-    uptime = %{name: "uptime", description: "Receive the uptime of the bot."}
-
-    commands = [chat, deafen, image, join, leave, mute, ping, undeafen, unmute, uptime]
+    commands = [
+      %{
+        name: "chat",
+        description: "Chat with the bot.",
+        options: [
+          %{name: "message", description: "The message to send.", required: true, type: 3}
+        ]
+      },
+      %{name: "deafen", description: "Deafen the bot."},
+      %{
+        name: "image",
+        description: "Generate an image.",
+        options: [%{name: "prompt", description: "The prompt to send.", required: true, type: 3}]
+      },
+      %{name: "join", description: "Force the bot to join the call."},
+      %{name: "leave", description: "Force the bot to leave the call."},
+      %{name: "mute", description: "Mute the bot."},
+      %{name: "ping", description: "Receive a simple diagnostic response."},
+      %{name: "undeafen", description: "Undeafen the bot."},
+      %{name: "unmute", description: "Unmute the bot."},
+      %{name: "uptime", description: "Receive the uptime of the bot."}
+    ]
 
     body = JSON.encode!(commands)
 
