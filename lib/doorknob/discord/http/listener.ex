@@ -99,6 +99,31 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
+  def handle_info({:gun_data, _pid, _ref, _fin, data}, state) do
+    if data != "" do
+      {:ok, decoded} = JSON.decode(data)
+      Logger.debug("Received HTTP response with data: #{inspect(decoded)}.")
+    else
+      Logger.debug("Received HTTP response with no data.")
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:gun_response, _pid, _ref, _fin, status, _headers}, state) do
+    message = "Received HTTP response with status code #{status}."
+
+    if status == 200 do
+      Logger.debug(message)
+    else
+      Logger.error(message)
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(msg, state) do
     Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
