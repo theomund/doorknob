@@ -33,7 +33,8 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.info("Starting Discord Gateway API listener.")
 
     opts = %{
-      protocols: [:http]
+      protocols: [:http],
+      retry: 0
     }
 
     host = API.host()
@@ -95,6 +96,10 @@ defmodule Doorknob.Discord.Gateway.Listener do
     Logger.debug("Received Gateway message: #{inspect(msg)}.")
 
     {:noreply, state}
+  end
+
+  def send(encoded) do
+    GenServer.cast(__MODULE__, {:send, {:text, encoded}})
   end
 
   def start_link(args) do

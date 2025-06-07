@@ -27,7 +27,7 @@ defmodule Doorknob.Discord.HTTP.Voice do
   def current_state(guild_id) do
     path = API.path("/guilds/#{guild_id}/voice-states/@me")
 
-    response = GenServer.call(Listener, {:get, path})
+    response = Listener.get(path)
 
     Logger.debug("Received current voice state response: #{inspect(response)}")
 
@@ -37,7 +37,7 @@ defmodule Doorknob.Discord.HTTP.Voice do
   def user_state(guild_id, user_id) do
     path = API.path("/guilds/#{guild_id}/voice-states/#{user_id}")
 
-    response = GenServer.call(Listener, {:get, path})
+    response = Listener.get(path)
 
     Logger.debug("Received user voice state response: #{inspect(response)}")
 

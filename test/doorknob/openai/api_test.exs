@@ -14,22 +14,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Discord.HTTP.Message do
-  @moduledoc """
-  Functions for handling messages.
-  """
+defmodule Doorknob.OpenAI.API.Test do
+  alias Doorknob.OpenAI.API
 
-  alias Doorknob.Discord.HTTP.API
-  alias Doorknob.Discord.HTTP.Listener
+  use ExUnit.Case
 
-  require Logger
+  test "Headers" do
+    state = %{key: "foo"}
 
-  def create(channel_id, content) do
-    path = API.path("/channels/#{channel_id}/messages")
-    body = JSON.encode!(%{content: content})
+    actual = API.headers(state)
 
-    Logger.debug("Created message: #{body}.")
+    expected = [
+      {"authorization", "Bearer foo"},
+      {"content-type", "application/json"},
+      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
+    ]
 
-    Listener.post(path, body)
+    assert actual == expected
+  end
+
+  test "Port Number" do
+    assert API.port() == 443
   end
 end

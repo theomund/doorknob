@@ -31,12 +31,12 @@ defmodule Doorknob.Discord.HTTP.API do
 
   def host() do
     uri = uri()
-    :binary.bin_to_list(uri.host)
+    String.to_charlist(uri.host)
   end
 
   def path(subpath) do
     uri = uri()
-    :binary.bin_to_list(uri.path <> subpath)
+    String.to_charlist(uri.path <> subpath)
   end
 
   def port() do

@@ -14,22 +14,33 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Discord.HTTP.Message do
+defmodule Doorknob.OpenAI.Image do
   @moduledoc """
-  Functions for handling messages.
+  Functions for handling images.
   """
 
-  alias Doorknob.Discord.HTTP.API
-  alias Doorknob.Discord.HTTP.Listener
+  alias Doorknob.OpenAI.API
+  alias Doorknob.OpenAI.Listener
 
   require Logger
 
-  def create(channel_id, content) do
-    path = API.path("/channels/#{channel_id}/messages")
-    body = JSON.encode!(%{content: content})
+  def create(prompt) do
+    path = API.path("/images/generations")
 
-    Logger.debug("Created message: #{body}.")
+    body =
+      JSON.encode!(%{
+        model: "dall-e-3",
+        prompt: prompt
+      })
 
-    Listener.post(path, body)
+    Logger.debug("Created image request: #{body}.")
+
+    response = Listener.post(path, body)
+
+    Logger.debug("Received image response: #{inspect(response)}.")
+
+    url = get_in(response, ["data", Access.at(0), "url"])
+
+    {:ok, url}
   end
 end

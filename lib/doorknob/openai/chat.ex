@@ -14,22 +14,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.Discord.HTTP.Message do
+defmodule Doorknob.OpenAI.Chat do
   @moduledoc """
-  Functions for handling messages.
+  Functions for handling chats.
   """
 
-  alias Doorknob.Discord.HTTP.API
-  alias Doorknob.Discord.HTTP.Listener
+  alias Doorknob.OpenAI.API
+  alias Doorknob.OpenAI.Listener
 
   require Logger
 
-  def create(channel_id, content) do
-    path = API.path("/channels/#{channel_id}/messages")
-    body = JSON.encode!(%{content: content})
+  def create(message) do
+    path = API.path("/responses")
 
-    Logger.debug("Created message: #{body}.")
+    context = Listener.update_context("user", message)
+    body = JSON.encode!(%{input: context, model: "gpt-4.1", store: false})
 
-    Listener.post(path, body)
+    Logger.debug("Created chat request: #{body}.")
+
+    response = Listener.post(path, body)
+
+    Logger.debug("Received chat response: #{inspect(response)}.")
+
+    text = get_in(response, ["output", Access.at(0), "content", Access.at(0), "text"])
+    Listener.update_context("assistant", text)
+
+    {:ok, text}
   end
 end

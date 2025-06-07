@@ -29,8 +29,9 @@ defmodule Doorknob.Discord.Gateway.Event do
         %{
           "op" => 0,
           "d" => %{
-            "data" => %{"name" => name},
+            "application_id" => application_id,
             "channel_id" => channel_id,
+            "data" => data,
             "guild_id" => guild_id,
             "id" => id,
             "member" => %{"user" => %{"id" => user_id}},
@@ -43,10 +44,12 @@ defmodule Doorknob.Discord.Gateway.Event do
     Logger.info("Received interaction create event.")
 
     context = %{
-      name: name,
+      name: data["name"],
+      application_id: application_id,
       channel_id: channel_id,
       guild_id: guild_id,
       id: id,
+      options: data["options"],
       token: token,
       user_id: user_id
     }
@@ -132,7 +135,7 @@ defmodule Doorknob.Discord.Gateway.Event do
   def heartbeat() do
     encoded = JSON.encode!(%{op: 1, d: 0})
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent heartbeat event.")
   end
@@ -148,7 +151,7 @@ defmodule Doorknob.Discord.Gateway.Event do
         }
       })
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent identify event.")
   end
@@ -165,7 +168,7 @@ defmodule Doorknob.Discord.Gateway.Event do
         }
       })
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent voice state update.")
   end

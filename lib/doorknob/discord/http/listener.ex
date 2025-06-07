@@ -73,6 +73,19 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
+  def handle_cast({:patch, path, body}, state) do
+    headers = API.headers(state)
+
+    :gun.patch(state.pid, path, headers, body)
+
+    Logger.debug(
+      "Sent PATCH request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+    )
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_cast({:put, path, body}, state) do
     headers = API.headers(state)
 
@@ -90,6 +103,22 @@ defmodule Doorknob.Discord.HTTP.Listener do
     Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
     {:noreply, state}
+  end
+
+  def get(path) do
+    GenServer.call(__MODULE__, {:get, path})
+  end
+
+  def patch(path, body) do
+    GenServer.cast(__MODULE__, {:patch, path, body})
+  end
+
+  def post(path, body) do
+    GenServer.cast(__MODULE__, {:post, path, body})
+  end
+
+  def put(path, body) do
+    GenServer.cast(__MODULE__, {:put, path, body})
   end
 
   def start_link(args) do

@@ -36,13 +36,26 @@ defmodule Doorknob.Discord.HTTP.Command do
 
     Logger.debug("Registering global commands: #{body}.")
 
-    GenServer.cast(Listener, {:put, path, body})
+    Listener.put(path, body)
   end
 
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
 
+    chat = %{
+      name: "chat",
+      description: "Chat with the bot.",
+      options: [%{name: "message", description: "The message to send.", required: true, type: 3}]
+    }
+
     deafen = %{name: "deafen", description: "Deafen the bot."}
+
+    image = %{
+      name: "image",
+      description: "Generate an image.",
+      options: [%{name: "prompt", description: "The prompt to send.", required: true, type: 3}]
+    }
+
     join = %{name: "join", description: "Force the bot to join the call."}
     leave = %{name: "leave", description: "Force the bot to leave the call."}
     mute = %{name: "mute", description: "Mute the bot."}
@@ -51,12 +64,12 @@ defmodule Doorknob.Discord.HTTP.Command do
     unmute = %{name: "unmute", description: "Unmute the bot."}
     uptime = %{name: "uptime", description: "Receive the uptime of the bot."}
 
-    commands = [deafen, join, leave, mute, ping, undeafen, unmute, uptime]
+    commands = [chat, deafen, image, join, leave, mute, ping, undeafen, unmute, uptime]
 
     body = JSON.encode!(commands)
 
     Logger.debug("Registering guild commands: #{body}")
 
-    GenServer.cast(Listener, {:put, path, body})
+    Listener.put(path, body)
   end
 end
