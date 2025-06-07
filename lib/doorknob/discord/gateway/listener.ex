@@ -98,6 +98,10 @@ defmodule Doorknob.Discord.Gateway.Listener do
     {:noreply, state}
   end
 
+  def send(encoded) do
+    GenServer.cast(__MODULE__, {:send, {:text, encoded}})
+  end
+
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end

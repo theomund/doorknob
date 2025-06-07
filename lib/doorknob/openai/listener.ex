@@ -47,28 +47,13 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_call({:get, path}, _from, state) do
-    headers = API.headers(state)
-    ref = :gun.get(state.pid, path, headers)
-
-    Logger.debug("Sent GET request: (path: #{path}, headers: #{inspect(headers)}).")
-
-    {:ok, body} = :gun.await_body(state.pid, ref)
-    {:ok, decoded} = JSON.decode(body)
-
-    {:reply, decoded, state}
-  end
-
-  @impl true
-  def handle_call({:post, path, body}, _from, state) do
+  def handle_call({:post, path, body, timeout}, _from, state) do
     headers = API.headers(state)
     ref = :gun.post(state.pid, path, headers, body)
 
     Logger.debug(
       "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
-
-    timeout = API.timeout()
 
     {:ok, body} = :gun.await_body(state.pid, ref, timeout)
     {:ok, decoded} = JSON.decode(body)
@@ -80,22 +65,9 @@ defmodule Doorknob.OpenAI.Listener do
   def handle_call({:update_context, message}, _from, state) do
     state = put_in(state.context, state.context ++ [message])
 
-    Logger.debug("Updated context: #{inspect(state.context)}")
+    Logger.debug("Updated context: #{inspect(state.context)}.")
 
     {:reply, state.context, state}
-  end
-
-  @impl true
-  def handle_cast({:put, path, body}, state) do
-    headers = API.headers(state)
-
-    :gun.put(state.pid, path, headers, body)
-
-    Logger.debug(
-      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
-    )
-
-    {:noreply, state}
   end
 
   @impl true
@@ -103,6 +75,15 @@ defmodule Doorknob.OpenAI.Listener do
     Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
     {:noreply, state}
+  end
+
+  def post(path, body) do
+    timeout = API.timeout()
+    GenServer.call(__MODULE__, {:post, path, body, timeout}, timeout)
+  end
+
+  def update_context(role, message) do
+    GenServer.call(__MODULE__, {:update_context, %{role: role, content: message}})
   end
 
   def start_link(args) do

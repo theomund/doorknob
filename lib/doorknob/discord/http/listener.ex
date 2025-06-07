@@ -105,6 +105,22 @@ defmodule Doorknob.Discord.HTTP.Listener do
     {:noreply, state}
   end
 
+  def get(path) do
+    GenServer.call(__MODULE__, {:get, path})
+  end
+
+  def patch(path, body) do
+    GenServer.cast(__MODULE__, {:patch, path, body})
+  end
+
+  def post(path, body) do
+    GenServer.cast(__MODULE__, {:post, path, body})
+  end
+
+  def put(path, body) do
+    GenServer.cast(__MODULE__, {:put, path, body})
+  end
+
   def start_link(args) do
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
   end

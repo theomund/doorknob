@@ -19,6 +19,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   Functions for handling interactions.
   """
 
+  alias Doorknob.OpenAI.Image
   alias Doorknob.Discord.Gateway.Event
   alias Doorknob.Discord.HTTP.API
   alias Doorknob.Discord.HTTP.Listener
@@ -28,20 +29,20 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   require Logger
 
   def respond(context) do
-    {timeliness, content} = handle(context)
+    {timeliness, content, embeds} = handle(context)
 
     case timeliness do
       :punctual ->
         path = API.path("/interactions/#{context.id}/#{context.token}/callback")
-        body = JSON.encode!(%{type: 4, data: %{content: content}})
+        body = JSON.encode!(%{type: 4, data: %{content: content, embeds: embeds}})
         Logger.debug("Sending punctual interaction response: #{body}.")
-        GenServer.cast(Listener, {:post, path, body})
+        Listener.post(path, body)
 
       :delayed ->
         path = API.path("/webhooks/#{context.application_id}/#{context.token}/messages/@original")
-        body = JSON.encode!(%{content: content})
+        body = JSON.encode!(%{content: content, embeds: embeds})
         Logger.debug("Sending delayed interaction response: #{body}.")
-        GenServer.cast(Listener, {:patch, path, body})
+        Listener.patch(path, body)
     end
   end
 
@@ -50,7 +51,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     body = JSON.encode!(%{type: 5})
 
-    GenServer.cast(Listener, {:post, path, body})
+    Listener.post(path, body)
   end
 
   defp handle(%{name: "chat"} = context) do
@@ -63,7 +64,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     {:ok, text} = Chat.create(message)
 
-    {:delayed, ":speaking_head: **Doorknob responded:**\n\n*#{text}*"}
+    {:delayed, ":speaking_head: **Doorknob responded:**\n\n*#{text}*", []}
   end
 
   defp handle(%{name: "deafen"} = context) do
@@ -78,7 +79,22 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":ear_with_hearing_aid: **Doorknob has been deafened.**"}
+    {:punctual, ":ear_with_hearing_aid: **Doorknob has been deafened.**", []}
+  end
+
+  defp handle(%{name: "image"} = context) do
+    Logger.debug("Handling image command.")
+
+    prompt =
+      Enum.find_value(context.options, fn %{"name" => "prompt", "value" => value} -> value end)
+
+    delay(context)
+
+    {:ok, url} = Image.create(prompt)
+
+    embeds = [%{title: prompt, image: %{url: url}, url: url}]
+
+    {:delayed, ":art: **Doorknob generated an image:**", embeds}
   end
 
   defp handle(%{name: "join"} = context) do
@@ -93,7 +109,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":wave: **Doorknob has joined the call.**"}
+    {:punctual, ":wave: **Doorknob has joined the call.**", []}
   end
 
   defp handle(%{name: "leave"} = context) do
@@ -108,7 +124,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":door: **Doorknob has left the call.**"}
+    {:punctual, ":door: **Doorknob has left the call.**", []}
   end
 
   defp handle(%{name: "mute"} = context) do
@@ -123,13 +139,13 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":mute: **Doorknob has been muted.**"}
+    {:punctual, ":mute: **Doorknob has been muted.**", []}
   end
 
   defp handle(%{name: "ping"}) do
     Logger.debug("Handling ping command.")
 
-    {:punctual, ":white_check_mark: **Doorknob is online.**"}
+    {:punctual, ":white_check_mark: **Doorknob is online.**", []}
   end
 
   defp handle(%{name: "undeafen"} = context) do
@@ -144,7 +160,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":ear: **Doorknob has been undeafened.**"}
+    {:punctual, ":ear: **Doorknob has been undeafened.**", []}
   end
 
   defp handle(%{name: "unmute"} = context) do
@@ -159,7 +175,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    {:punctual, ":speaker: **Doorknob has been unmuted.**"}
+    {:punctual, ":speaker: **Doorknob has been unmuted.**", []}
   end
 
   defp handle(%{name: "uptime"}) do
@@ -167,12 +183,12 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     {uptime, _} = :erlang.statistics(:wall_clock)
 
-    {:punctual, ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"}
+    {:punctual, ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**", []}
   end
 
   defp handle(%{name: name}) do
     Logger.warning("Handling unimplemented command: '#{name}'.")
 
-    {:punctual, ":warning: **Doorknob can't handle this command yet.**"}
+    {:punctual, ":warning: **Doorknob can't handle this command yet.**", []}
   end
 end
