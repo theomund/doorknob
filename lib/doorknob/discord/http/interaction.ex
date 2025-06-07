@@ -64,7 +64,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     {:ok, text} = Chat.create(message)
 
-    {:delayed, ":speaking_head: **Doorknob responded:**\n\n*#{text}*", []}
+    {:delayed, ":speaking_head: **Doorknob responded:**\n\n#{text}", []}
   end
 
   defp handle(%{name: "deafen"} = context) do
