@@ -79,4 +79,4 @@ test: test-mix
 
 # Test the Elixir source code.
 test-mix: setup-mix
-    mix test
+    -mix test --cover
