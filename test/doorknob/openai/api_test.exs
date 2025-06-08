@@ -20,9 +20,9 @@ defmodule Doorknob.OpenAI.API.Test do
   use ExUnit.Case
 
   test "Headers" do
-    state = %{key: "foo"}
+    key = "foo"
 
-    actual = API.headers(state)
+    actual = API.headers(key)
 
     expected = [
       {"authorization", "Bearer foo"},

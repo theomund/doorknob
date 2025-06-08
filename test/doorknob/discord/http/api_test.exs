@@ -20,9 +20,9 @@ defmodule Doorknob.Discord.HTTP.API.Test do
   use ExUnit.Case
 
   test "Headers" do
-    state = %{token: "foo"}
+    token = "foo"
 
-    actual = API.headers(state)
+    actual = API.headers(token)
 
     expected = [
       {"authorization", "Bot foo"},

@@ -21,9 +21,9 @@ defmodule Doorknob.OpenAI.API do
 
   @url "https://api.openai.com/v1"
 
-  def headers(state) do
+  def headers(key) do
     [
-      {"authorization", "Bearer #{state.key}"},
+      {"authorization", "Bearer #{key}"},
       {"content-type", "application/json"},
       {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
     ]

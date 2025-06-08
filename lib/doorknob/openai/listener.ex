@@ -48,7 +48,7 @@ defmodule Doorknob.OpenAI.Listener do
 
   @impl true
   def handle_call({:post, path, body, timeout}, _from, %__MODULE__{} = state) do
-    headers = API.headers(state)
+    headers = API.headers(state.key)
     ref = :gun.post(state.pid, path, headers, body)
 
     Logger.debug(

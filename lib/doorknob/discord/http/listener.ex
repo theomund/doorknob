@@ -46,7 +46,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   @impl true
   def handle_call({:get, path}, _from, %__MODULE__{} = state) do
-    headers = API.headers(state)
+    headers = API.headers(state.token)
 
     ref = :gun.get(state.pid, path, headers)
 
@@ -61,7 +61,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   @impl true
   def handle_cast({:post, path, body}, %__MODULE__{} = state) do
-    headers = API.headers(state)
+    headers = API.headers(state.token)
 
     :gun.post(state.pid, path, headers, body)
 
@@ -74,7 +74,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   @impl true
   def handle_cast({:patch, path, body}, %__MODULE__{} = state) do
-    headers = API.headers(state)
+    headers = API.headers(state.token)
 
     :gun.patch(state.pid, path, headers, body)
 
@@ -87,7 +87,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   @impl true
   def handle_cast({:put, path, body}, %__MODULE__{} = state) do
-    headers = API.headers(state)
+    headers = API.headers(state.token)
 
     :gun.put(state.pid, path, headers, body)
 
