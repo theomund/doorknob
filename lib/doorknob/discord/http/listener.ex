@@ -114,10 +114,10 @@ defmodule Doorknob.Discord.HTTP.Listener do
   def handle_info({:gun_response, _pid, _ref, _fin, status, _headers}, state) do
     message = "Received HTTP response with status code #{status}."
 
-    if status == 200 do
-      Logger.debug(message)
-    else
-      Logger.error(message)
+    case status do
+      200 -> Logger.debug(message)
+      204 -> Logger.debug(message)
+      _ -> Logger.error(message)
     end
 
     {:noreply, state}
