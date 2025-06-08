@@ -24,24 +24,16 @@ defmodule Doorknob.Discord.HTTP.API.Test do
 
     actual = API.headers(token)
 
-    expected = [
-      {"authorization", "Bot foo"},
-      {"content-type", "application/json"},
-      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
-    ]
+    expected = %{
+      authorization: "Bot foo",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
 
     assert actual == expected
   end
 
-  test "Host" do
-    assert API.host() == ~c"discord.com"
-  end
-
   test "Path" do
-    assert API.path("/foo") == ~c"/api/v10/foo"
-  end
-
-  test "Port" do
-    assert API.port() == 443
+    assert API.path("/foo") == "https://discord.com/api/v10/foo"
   end
 end

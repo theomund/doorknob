@@ -32,9 +32,9 @@ defmodule Doorknob.Discord.HTTP.Command do
 
   defp register_global(application_id) do
     path = API.path("/applications/#{application_id}/commands")
-    body = JSON.encode!([])
+    body = []
 
-    Logger.debug("Registering global commands: #{body}.")
+    Logger.debug("Registering global commands: #{inspect(body)}.")
 
     Listener.put(path, body)
   end
@@ -42,7 +42,7 @@ defmodule Doorknob.Discord.HTTP.Command do
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
 
-    commands = [
+    body = [
       %{
         name: "chat",
         description: "Chat with the bot.",
@@ -65,9 +65,7 @@ defmodule Doorknob.Discord.HTTP.Command do
       %{name: "uptime", description: "Receive the uptime of the bot."}
     ]
 
-    body = JSON.encode!(commands)
-
-    Logger.debug("Registering guild commands: #{body}")
+    Logger.debug("Registering guild commands: #{inspect(body)}")
 
     Listener.put(path, body)
   end

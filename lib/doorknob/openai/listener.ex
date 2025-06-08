@@ -25,21 +25,14 @@ defmodule Doorknob.OpenAI.Listener do
 
   use GenServer
 
-  defstruct [:context, :key, :pid, :ref]
+  defstruct [:context, :key]
 
   @impl true
   def init(args) do
     Logger.info("Starting OpenAI API listener.")
 
-    host = API.host()
-    port = API.port()
-
-    {:ok, pid} = :gun.open(host, port)
-    {:ok, ref} = :gun.await_up(pid)
-
     context = [%{role: "developer", content: args.prompt}]
-
-    state = %__MODULE__{context: context, key: args.key, pid: pid, ref: ref}
+    state = %__MODULE__{context: context, key: args.key}
 
     Logger.info("Successfully started OpenAI API listener.")
 
@@ -47,18 +40,18 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_call({:post, path, body, timeout}, _from, %__MODULE__{} = state) do
+  def handle_call({:post, path, body}, _from, %__MODULE__{} = state) do
     headers = API.headers(state.key)
-    ref = :gun.post(state.pid, path, headers, body)
 
     Logger.debug(
-      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
 
-    {:ok, body} = :gun.await_body(state.pid, ref, timeout)
-    {:ok, decoded} = JSON.decode(body)
+    response = Req.post!(path, headers: headers, json: body)
 
-    {:reply, decoded, state}
+    Logger.debug("Received POST response: #{inspect(response)}.")
+
+    {:reply, response.body, state}
   end
 
   @impl true
@@ -70,44 +63,10 @@ defmodule Doorknob.OpenAI.Listener do
     {:reply, state.context, state}
   end
 
-  @impl true
-  def handle_info({:gun_data, pid, ref, _fin, data}, %__MODULE__{pid: pid, ref: ref} = state) do
-    if data != "" do
-      {:ok, decoded} = JSON.decode(data)
-      Logger.debug("Received HTTP response with data: #{inspect(decoded)}.")
-    else
-      Logger.debug("Received HTTP response with no data.")
-    end
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(
-        {:gun_response, pid, ref, _fin, status, _headers},
-        %__MODULE__{pid: pid, ref: ref} = state
-      ) do
-    message = "Received HTTP response with status code #{status}."
-
-    case status do
-      200 -> Logger.debug(message)
-      204 -> Logger.debug(message)
-      _ -> Logger.error(message)
-    end
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(msg, %__MODULE__{} = state) do
-    Logger.debug("Received HTTP message: #{inspect(msg)}.")
-
-    {:noreply, state}
-  end
-
   def post(path, body) do
     timeout = API.timeout()
-    GenServer.call(__MODULE__, {:post, path, body, timeout}, timeout)
+
+    GenServer.call(__MODULE__, {:post, path, body}, timeout)
   end
 
   def update_context(role, message) do

@@ -28,12 +28,12 @@ defmodule Doorknob.OpenAI.Image do
     path = API.path("/images/generations")
 
     body =
-      JSON.encode!(%{
+      %{
         model: "dall-e-3",
         prompt: prompt
-      })
+      }
 
-    Logger.debug("Created image request: #{body}.")
+    Logger.debug("Created image request: #{inspect(body)}.")
 
     response = Listener.post(path, body)
 

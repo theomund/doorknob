@@ -34,14 +34,14 @@ defmodule Doorknob.Discord.HTTP.Interaction do
     case timeliness do
       :punctual ->
         path = API.path("/interactions/#{context.id}/#{context.token}/callback")
-        body = JSON.encode!(%{type: 4, data: %{content: content, embeds: embeds}})
-        Logger.debug("Sending punctual interaction response: #{body}.")
+        body = %{type: 4, data: %{content: content, embeds: embeds}}
+        Logger.debug("Sending punctual interaction response: #{inspect(body)}.")
         Listener.post(path, body)
 
       :delayed ->
         path = API.path("/webhooks/#{context.application_id}/#{context.token}/messages/@original")
-        body = JSON.encode!(%{content: content, embeds: embeds})
-        Logger.debug("Sending delayed interaction response: #{body}.")
+        body = %{content: content, embeds: embeds}
+        Logger.debug("Sending delayed interaction response: #{inspect(body)}.")
         Listener.patch(path, body)
     end
   end
@@ -49,7 +49,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   defp delay(context) do
     path = API.path("/interactions/#{context.id}/#{context.token}/callback")
 
-    body = JSON.encode!(%{type: 5})
+    body = %{type: 5}
 
     Listener.post(path, body)
   end

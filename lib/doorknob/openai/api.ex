@@ -22,32 +22,18 @@ defmodule Doorknob.OpenAI.API do
   @url "https://api.openai.com/v1"
 
   def headers(key) do
-    [
-      {"authorization", "Bearer #{key}"},
-      {"content-type", "application/json"},
-      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
-    ]
-  end
-
-  def host do
-    uri = uri()
-    String.to_charlist(uri.host)
+    %{
+      authorization: "Bearer #{key}",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
   end
 
   def path(subpath) do
-    uri = uri()
-    String.to_charlist(uri.path <> subpath)
-  end
-
-  def port do
-    443
+    @url <> subpath
   end
 
   def timeout do
     30_000
-  end
-
-  defp uri do
-    URI.parse(@url)
   end
 end

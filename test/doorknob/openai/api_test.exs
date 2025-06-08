@@ -24,25 +24,17 @@ defmodule Doorknob.OpenAI.API.Test do
 
     actual = API.headers(key)
 
-    expected = [
-      {"authorization", "Bearer foo"},
-      {"content-type", "application/json"},
-      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
-    ]
+    expected = %{
+      authorization: "Bearer foo",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
 
     assert actual == expected
   end
 
-  test "Host" do
-    assert API.host() == ~c"api.openai.com"
-  end
-
   test "Path" do
-    assert API.path("/foo") == ~c"/v1/foo"
-  end
-
-  test "Port" do
-    assert API.port() == 443
+    assert API.path("/foo") == "https://api.openai.com/v1/foo"
   end
 
   test "Timeout" do

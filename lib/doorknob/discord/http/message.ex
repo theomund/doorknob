@@ -26,7 +26,7 @@ defmodule Doorknob.Discord.HTTP.Message do
 
   def create(channel_id, content) do
     path = API.path("/channels/#{channel_id}/messages")
-    body = JSON.encode!(%{content: content})
+    body = %{content: content}
 
     Logger.debug("Created message: #{body}.")
 

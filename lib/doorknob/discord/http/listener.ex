@@ -25,19 +25,13 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   use GenServer
 
-  defstruct [:pid, :ref, :token]
+  defstruct [:token]
 
   @impl true
   def init(args) do
     Logger.info("Starting Discord HTTP API listener.")
 
-    host = API.host()
-    port = API.port()
-
-    {:ok, pid} = :gun.open(host, port)
-    {:ok, ref} = :gun.await_up(pid)
-
-    state = %__MODULE__{pid: pid, ref: ref, token: args.token}
+    state = %__MODULE__{token: args.token}
 
     Logger.info("Successfully started Discord HTTP API listener.")
 
@@ -48,26 +42,26 @@ defmodule Doorknob.Discord.HTTP.Listener do
   def handle_call({:get, path}, _from, %__MODULE__{} = state) do
     headers = API.headers(state.token)
 
-    ref = :gun.get(state.pid, path, headers)
+    Logger.debug("Sending GET request: (path: #{path}, headers: #{inspect(headers)}).")
 
-    Logger.debug("Sent GET request: (path: #{path}, headers: #{inspect(headers)}).")
+    response = Req.get!(path, headers: headers)
 
-    {:ok, body} = :gun.await_body(state.pid, ref)
+    Logger.debug("Received GET response: #{inspect(response)}")
 
-    {:ok, decoded} = JSON.decode(body)
-
-    {:reply, decoded, state}
+    {:reply, response.body, state}
   end
 
   @impl true
   def handle_cast({:post, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state.token)
 
-    :gun.post(state.pid, path, headers, body)
-
     Logger.debug(
-      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
+
+    response = Req.post!(path, headers: headers, json: body)
+
+    Logger.debug("Received POST response: #{inspect(response)}.")
 
     {:noreply, state}
   end
@@ -76,11 +70,13 @@ defmodule Doorknob.Discord.HTTP.Listener do
   def handle_cast({:patch, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state.token)
 
-    :gun.patch(state.pid, path, headers, body)
-
     Logger.debug(
-      "Sent PATCH request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending PATCH request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
+
+    response = Req.patch!(path, headers: headers, json: body)
+
+    Logger.debug("Received PATCH response: #{inspect(response)}.")
 
     {:noreply, state}
   end
@@ -89,46 +85,13 @@ defmodule Doorknob.Discord.HTTP.Listener do
   def handle_cast({:put, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state.token)
 
-    :gun.put(state.pid, path, headers, body)
-
     Logger.debug(
-      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
 
-    {:noreply, state}
-  end
+    response = Req.put!(path, headers: headers, json: body)
 
-  @impl true
-  def handle_info({:gun_data, pid, ref, _fin, data}, %__MODULE__{pid: pid, ref: ref} = state) do
-    if data != "" do
-      {:ok, decoded} = JSON.decode(data)
-      Logger.debug("Received HTTP response with data: #{inspect(decoded)}.")
-    else
-      Logger.debug("Received HTTP response with no data.")
-    end
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(
-        {:gun_response, pid, ref, _fin, status, _headers},
-        %__MODULE__{pid: pid, ref: ref} = state
-      ) do
-    message = "Received HTTP response with status code #{status}."
-
-    case status do
-      200 -> Logger.debug(message)
-      204 -> Logger.debug(message)
-      _ -> Logger.error(message)
-    end
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(msg, %__MODULE__{} = state) do
-    Logger.debug("Received HTTP message: #{inspect(msg)}.")
+    Logger.debug("Received PUT response: #{inspect(response)}.")
 
     {:noreply, state}
   end

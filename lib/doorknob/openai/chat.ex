@@ -28,9 +28,9 @@ defmodule Doorknob.OpenAI.Chat do
     path = API.path("/responses")
 
     context = Listener.update_context("user", message)
-    body = JSON.encode!(%{input: context, model: "gpt-4.1", store: false})
+    body = %{input: context, model: "gpt-4.1", store: false}
 
-    Logger.debug("Created chat request: #{body}.")
+    Logger.debug("Created chat request: #{inspect(body)}.")
 
     response = Listener.post(path, body)
 

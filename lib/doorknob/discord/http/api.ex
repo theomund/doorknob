@@ -22,28 +22,14 @@ defmodule Doorknob.Discord.HTTP.API do
   @url "https://discord.com/api/v10"
 
   def headers(token) do
-    [
-      {"authorization", "Bot #{token}"},
-      {"content-type", "application/json"},
-      {"user-agent", "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"}
-    ]
-  end
-
-  def host do
-    uri = uri()
-    String.to_charlist(uri.host)
+    %{
+      authorization: "Bot #{token}",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
   end
 
   def path(subpath) do
-    uri = uri()
-    String.to_charlist(uri.path <> subpath)
-  end
-
-  def port do
-    443
-  end
-
-  defp uri do
-    URI.parse(@url)
+    @url <> subpath
   end
 end

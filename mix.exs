@@ -37,7 +37,8 @@ defmodule Doorknob.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:gun, "~> 2.2.0"}
+      {:gun, "~> 2.2.0"},
+      {:req, "~> 0.5.10"}
     ]
   end
 end

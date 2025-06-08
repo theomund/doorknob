@@ -43,6 +43,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     {:ok, pid} = :gun.open(host, port, opts)
     {:ok, :http} = :gun.await_up(pid)
+
     ref = :gun.ws_upgrade(pid, path)
 
     state = %__MODULE__{pid: pid, ref: ref, token: args.token}
