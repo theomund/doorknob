@@ -29,7 +29,7 @@ defmodule Doorknob.Discord.HTTP.API do
     ]
   end
 
-  def host() do
+  def host do
     uri = uri()
     String.to_charlist(uri.host)
   end
@@ -39,11 +39,11 @@ defmodule Doorknob.Discord.HTTP.API do
     String.to_charlist(uri.path <> subpath)
   end
 
-  def port() do
+  def port do
     443
   end
 
-  defp uri() do
+  defp uri do
     URI.parse(@url)
   end
 end

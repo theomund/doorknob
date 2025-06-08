@@ -132,7 +132,7 @@ defmodule Doorknob.Discord.Gateway.Event do
     state
   end
 
-  def heartbeat() do
+  def heartbeat do
     encoded = JSON.encode!(%{op: 1, d: 0})
 
     Listener.send(encoded)

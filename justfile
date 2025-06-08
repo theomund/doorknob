@@ -49,7 +49,7 @@ lint: lint-credo lint-vale lint-yamllint
 
 # Run the Elixir linter.
 lint-credo: setup-mix
-    mix credo
+    mix credo --strict
 
 # Run the prose linter.
 lint-vale:

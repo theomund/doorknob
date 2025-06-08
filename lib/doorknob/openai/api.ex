@@ -29,7 +29,7 @@ defmodule Doorknob.OpenAI.API do
     ]
   end
 
-  def host() do
+  def host do
     uri = uri()
     String.to_charlist(uri.host)
   end
@@ -39,15 +39,15 @@ defmodule Doorknob.OpenAI.API do
     String.to_charlist(uri.path <> subpath)
   end
 
-  def port() do
+  def port do
     443
   end
 
-  def timeout() do
+  def timeout do
     30_000
   end
 
-  defp uri() do
+  defp uri do
     URI.parse(@url)
   end
 end

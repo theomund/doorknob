@@ -19,12 +19,12 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   Functions for handling interactions.
   """
 
-  alias Doorknob.OpenAI.Image
   alias Doorknob.Discord.Gateway.Event
   alias Doorknob.Discord.HTTP.API
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.Voice
   alias Doorknob.OpenAI.Chat
+  alias Doorknob.OpenAI.Image
 
   require Logger
 
