@@ -25,7 +25,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   use GenServer
 
-  defstruct [:pid, :token]
+  defstruct [:pid, :ref, :token]
 
   @impl true
   def init(args) do
@@ -35,9 +35,9 @@ defmodule Doorknob.Discord.HTTP.Listener do
     port = API.port()
 
     {:ok, pid} = :gun.open(host, port)
-    {:ok, :http2} = :gun.await_up(pid)
+    {:ok, ref} = :gun.await_up(pid)
 
-    state = %__MODULE__{pid: pid, token: args.token}
+    state = %__MODULE__{pid: pid, ref: ref, token: args.token}
 
     Logger.info("Successfully started Discord HTTP API listener.")
 
@@ -45,7 +45,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_call({:get, path}, _from, state) do
+  def handle_call({:get, path}, _from, %__MODULE__{} = state) do
     headers = API.headers(state)
 
     ref = :gun.get(state.pid, path, headers)
@@ -60,7 +60,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_cast({:post, path, body}, state) do
+  def handle_cast({:post, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state)
 
     :gun.post(state.pid, path, headers, body)
@@ -73,7 +73,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_cast({:patch, path, body}, state) do
+  def handle_cast({:patch, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state)
 
     :gun.patch(state.pid, path, headers, body)
@@ -86,7 +86,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_cast({:put, path, body}, state) do
+  def handle_cast({:put, path, body}, %__MODULE__{} = state) do
     headers = API.headers(state)
 
     :gun.put(state.pid, path, headers, body)
@@ -99,7 +99,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_info({:gun_data, _pid, _ref, _fin, data}, state) do
+  def handle_info({:gun_data, pid, ref, _fin, data}, %__MODULE__{pid: pid, ref: ref} = state) do
     if data != "" do
       {:ok, decoded} = JSON.decode(data)
       Logger.debug("Received HTTP response with data: #{inspect(decoded)}.")
@@ -111,7 +111,10 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_info({:gun_response, _pid, _ref, _fin, status, _headers}, state) do
+  def handle_info(
+        {:gun_response, pid, ref, _fin, status, _headers},
+        %__MODULE__{pid: pid, ref: ref} = state
+      ) do
     message = "Received HTTP response with status code #{status}."
 
     case status do
@@ -124,7 +127,7 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_info(msg, state) do
+  def handle_info(msg, %__MODULE__{} = state) do
     Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
     {:noreply, state}

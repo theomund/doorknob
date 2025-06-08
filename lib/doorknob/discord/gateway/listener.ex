@@ -51,7 +51,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
-  def handle_cast({:send, {:text, data} = frame}, state) do
+  def handle_cast({:send, {:text, data} = frame}, %__MODULE__{} = state) do
     :gun.ws_send(state.pid, state.ref, frame)
 
     {:ok, decoded} = JSON.decode(data)
@@ -62,14 +62,17 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
-  def handle_info({:gun_upgrade, _pid, _ref, ["websocket"], _headers}, state) do
+  def handle_info(
+        {:gun_upgrade, pid, ref, ["websocket"], _headers},
+        %__MODULE__{pid: pid, ref: ref} = state
+      ) do
     Logger.info("Successfully started Discord Gateway API listener.")
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info({:gun_ws, _pid, _ref, {:text, data}}, state) do
+  def handle_info({:gun_ws, pid, ref, {:text, data}}, %__MODULE__{pid: pid, ref: ref} = state) do
     {:ok, decoded} = JSON.decode(data)
 
     Logger.debug("Received text frame: #{inspect(decoded)}.")
@@ -80,14 +83,14 @@ defmodule Doorknob.Discord.Gateway.Listener do
   end
 
   @impl true
-  def handle_info(:heartbeat, state) do
+  def handle_info(:heartbeat, %__MODULE__{} = state) do
     Event.heartbeat()
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info(msg, state) do
+  def handle_info(msg, %__MODULE__{} = state) do
     Logger.debug("Received Gateway message: #{inspect(msg)}.")
 
     {:noreply, state}

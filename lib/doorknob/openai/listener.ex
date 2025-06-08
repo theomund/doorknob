@@ -25,7 +25,7 @@ defmodule Doorknob.OpenAI.Listener do
 
   use GenServer
 
-  defstruct [:context, :key, :pid]
+  defstruct [:context, :key, :pid, :ref]
 
   @impl true
   def init(args) do
@@ -35,11 +35,11 @@ defmodule Doorknob.OpenAI.Listener do
     port = API.port()
 
     {:ok, pid} = :gun.open(host, port)
-    {:ok, :http2} = :gun.await_up(pid)
+    {:ok, ref} = :gun.await_up(pid)
 
     context = [%{role: "developer", content: args.prompt}]
 
-    state = %__MODULE__{context: context, key: args.key, pid: pid}
+    state = %__MODULE__{context: context, key: args.key, pid: pid, ref: ref}
 
     Logger.info("Successfully started OpenAI API listener.")
 
@@ -47,7 +47,7 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_call({:post, path, body, timeout}, _from, state) do
+  def handle_call({:post, path, body, timeout}, _from, %__MODULE__{} = state) do
     headers = API.headers(state)
     ref = :gun.post(state.pid, path, headers, body)
 
@@ -62,7 +62,7 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_call({:update_context, message}, _from, state) do
+  def handle_call({:update_context, message}, _from, %__MODULE__{} = state) do
     state = put_in(state.context, state.context ++ [message])
 
     Logger.debug("Updated context: #{inspect(state.context)}.")
@@ -71,7 +71,7 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_info({:gun_data, _pid, _ref, _fin, data}, state) do
+  def handle_info({:gun_data, pid, ref, _fin, data}, %__MODULE__{pid: pid, ref: ref} = state) do
     if data != "" do
       {:ok, decoded} = JSON.decode(data)
       Logger.debug("Received HTTP response with data: #{inspect(decoded)}.")
@@ -83,7 +83,10 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_info({:gun_response, _pid, _ref, _fin, status, _headers}, state) do
+  def handle_info(
+        {:gun_response, pid, ref, _fin, status, _headers},
+        %__MODULE__{pid: pid, ref: ref} = state
+      ) do
     message = "Received HTTP response with status code #{status}."
 
     case status do
@@ -96,7 +99,7 @@ defmodule Doorknob.OpenAI.Listener do
   end
 
   @impl true
-  def handle_info(msg, state) do
+  def handle_info(msg, %__MODULE__{} = state) do
     Logger.debug("Received HTTP message: #{inspect(msg)}.")
 
     {:noreply, state}
