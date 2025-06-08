@@ -33,7 +33,19 @@ defmodule Doorknob.OpenAI.API.Test do
     assert actual == expected
   end
 
-  test "Port Number" do
+  test "Host" do
+    assert API.host() == ~c"api.openai.com"
+  end
+
+  test "Path" do
+    assert API.path("/foo") == ~c"/v1/foo"
+  end
+
+  test "Port" do
     assert API.port() == 443
+  end
+
+  test "Timeout" do
+    assert API.timeout() == 30_000
   end
 end

@@ -33,7 +33,15 @@ defmodule Doorknob.Discord.HTTP.API.Test do
     assert actual == expected
   end
 
-  test "Port Number" do
+  test "Host" do
+    assert API.host() == ~c"discord.com"
+  end
+
+  test "Path" do
+    assert API.path("/foo") == ~c"/api/v10/foo"
+  end
+
+  test "Port" do
     assert API.port() == 443
   end
 end
