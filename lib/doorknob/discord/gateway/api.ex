@@ -23,12 +23,12 @@ defmodule Doorknob.Discord.Gateway.API do
 
   def host do
     uri = uri()
-    String.to_charlist(uri.host)
+    uri.host
   end
 
   def path do
     uri = uri()
-    String.to_charlist(uri.path <> "?" <> uri.query)
+    uri.path <> "?" <> uri.query
   end
 
   def port do

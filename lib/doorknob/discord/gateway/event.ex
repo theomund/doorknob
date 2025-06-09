@@ -56,13 +56,13 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     Interaction.respond(context)
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 0, "t" => "MESSAGE_CREATE"}, %Listener{} = state) do
     Logger.info("Received message create event.")
 
-    state
+    {:ok, state}
   end
 
   def handle(
@@ -77,33 +77,33 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     state = put_in(state.id, application_id)
 
-    :ok = Command.register(state.id, guilds)
+    Command.register(state.id, guilds)
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 0, "t" => type}, %Listener{} = state) do
     Logger.info("Received dispatch event: #{inspect(type)}.")
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 1}, %Listener{} = state) do
     Logger.warning("Received heartbeat event.")
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 7}, %Listener{} = state) do
     Logger.warning("Received reconnect event.")
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 9}, %Listener{} = state) do
     Logger.warning("Received invalid session event.")
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 10, "d" => data}, %Listener{} = state) do
@@ -115,7 +115,7 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     Process.send_after(Listener, :heartbeat, state.interval)
 
-    state
+    {:ok, state}
   end
 
   def handle(%{"op" => 11}, %Listener{} = state) do
@@ -123,13 +123,13 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     Process.send_after(Listener, :heartbeat, state.interval)
 
-    state
+    {:ok, state}
   end
 
   def handle(event, %Listener{} = state) do
     Logger.warning("Received unknown event: #{inspect(event)}.")
 
-    state
+    {:ok, state}
   end
 
   def heartbeat do

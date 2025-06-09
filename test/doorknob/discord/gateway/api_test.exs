@@ -19,7 +19,15 @@ defmodule Doorknob.Discord.Gateway.API.Test do
 
   use ExUnit.Case
 
+  test "Host" do
+    assert API.host() == "gateway.discord.gg"
+  end
+
   test "Path" do
-    assert API.path() == ~c"/?v=10&encoding=json"
+    assert API.path() == "/?v=10&encoding=json"
+  end
+
+  test "Port" do
+    assert API.port() == 443
   end
 end

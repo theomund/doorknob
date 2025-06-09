@@ -22,54 +22,54 @@ defmodule Doorknob.Discord.Gateway.Event.Test do
 
   test "Handle Message Create" do
     event = %{"op" => 0, "t" => "MESSAGE_CREATE"}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
 
   test "Handle Dispatch" do
     event = %{"op" => 0, "t" => "EXAMPLE_EVENT"}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
 
   test "Handle Heartbeat" do
     event = %{"op" => 1}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
 
   test "Handle Reconnect" do
     event = %{"op" => 7}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
 
   test "Handle Invalid Session" do
     event = %{"op" => 9}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
 
   test "Handle Unknown" do
     event = %{"op" => 12}
-    expected = %Listener{pid: 1}
+    expected = %Listener{}
 
-    actual = Event.handle(event, expected)
+    {:ok, actual} = Event.handle(event, expected)
 
     assert actual == expected
   end
