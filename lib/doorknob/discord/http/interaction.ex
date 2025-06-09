@@ -54,11 +54,8 @@ defmodule Doorknob.Discord.HTTP.Interaction do
     Listener.post(path, body)
   end
 
-  defp handle(%{name: "chat"} = context) do
+  defp handle(%{name: "chat", options: [%{"name" => "message", "value" => message}]} = context) do
     Logger.debug("Handling chat command.")
-
-    message =
-      Enum.find_value(context.options, fn %{"name" => "message", "value" => value} -> value end)
 
     delay(context)
 
@@ -82,11 +79,8 @@ defmodule Doorknob.Discord.HTTP.Interaction do
     {:punctual, %{content: ":ear_with_hearing_aid: **Doorknob has been deafened.**"}}
   end
 
-  defp handle(%{name: "image"} = context) do
+  defp handle(%{name: "image", options: [%{"name" => "prompt", "value" => prompt}]} = context) do
     Logger.debug("Handling image command.")
-
-    prompt =
-      Enum.find_value(context.options, fn %{"name" => "prompt", "value" => value} -> value end)
 
     delay(context)
 
