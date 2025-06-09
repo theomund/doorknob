@@ -54,7 +54,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
           {:ok, websocket, [{:text, event}]} = Mint.WebSocket.decode(websocket, data)
           {:ok, decoded} = JSON.decode(event)
 
-          Logger.debug("Decoded initial event: #{inspect(decoded)}")
+          Logger.debug("Decoded initial event: #{inspect(decoded)}.")
 
           state = %__MODULE__{conn: conn, ref: ref, token: args.token, websocket: websocket}
 
@@ -111,17 +111,17 @@ defmodule Doorknob.Discord.Gateway.Listener do
     state =
       Enum.reduce(frames, state, fn
         {:close, _code, _reason} = frame, state ->
-          Logger.error("Received close frame: #{inspect(frame)}")
+          Logger.error("Received close frame: #{inspect(frame)}.")
           state
 
         {:text, event} = frame, state ->
-          Logger.debug("Received text frame: #{inspect(frame)}")
+          Logger.debug("Received text frame: #{inspect(frame)}.")
           {:ok, decoded} = JSON.decode(event)
           {:ok, state} = Event.handle(decoded, state)
           state
 
         frame, state ->
-          Logger.warning("Received unknown frame: #{inspect(frame)}")
+          Logger.warning("Received unknown frame: #{inspect(frame)}.")
           state
       end)
 
