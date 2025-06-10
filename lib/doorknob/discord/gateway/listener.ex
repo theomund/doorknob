@@ -41,15 +41,16 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     http_reply_message = receive(do: (message -> message))
 
-    {:ok, state} =
-      case Mint.WebSocket.stream(conn, http_reply_message) do
-        {:ok, conn,
-         [
-           {:status, ^ref, status},
-           {:headers, ^ref, resp_headers},
-           {:data, ^ref, data},
-           {:done, ^ref}
-         ]} ->
+    {:ok, conn, responses} = Mint.WebSocket.stream(conn, http_reply_message)
+
+    result =
+      case responses do
+        [
+          {:status, ^ref, status},
+          {:headers, ^ref, resp_headers},
+          {:data, ^ref, data},
+          {:done, ^ref}
+        ] ->
           {:ok, conn, websocket} = Mint.WebSocket.new(conn, ref, status, resp_headers)
           {:ok, websocket, [{:text, event}]} = Mint.WebSocket.decode(websocket, data)
           {:ok, decoded} = JSON.decode(event)
@@ -60,12 +61,11 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
           Event.handle(decoded, state)
 
-        {:ok, conn,
-         [
-           {:status, ^ref, status},
-           {:headers, ^ref, resp_headers},
-           {:done, ^ref}
-         ]} ->
+        [
+          {:status, ^ref, status},
+          {:headers, ^ref, resp_headers},
+          {:done, ^ref}
+        ] ->
           {:ok, conn, websocket} = Mint.WebSocket.new(conn, ref, status, resp_headers)
 
           state = %__MODULE__{conn: conn, ref: ref, token: args.token, websocket: websocket}
@@ -75,7 +75,7 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
     Logger.info("Started Discord Gateway API listener.")
 
-    {:ok, state}
+    result
   end
 
   @impl true
