@@ -51,11 +51,6 @@ defmodule Doorknob.Discord.HTTP.Command do
         ]
       },
       %{name: "deafen", description: "Deafen the bot."},
-      %{
-        name: "image",
-        description: "Generate an image.",
-        options: [%{name: "prompt", description: "The prompt to send.", required: true, type: 3}]
-      },
       %{name: "join", description: "Force the bot to join the call."},
       %{name: "leave", description: "Force the bot to leave the call."},
       %{name: "mute", description: "Mute the bot."},

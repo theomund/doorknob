@@ -37,6 +37,7 @@ defmodule Doorknob.OpenAI.Chat do
     Logger.debug("Received chat response: #{inspect(response)}.")
 
     text = get_in(response, ["output", Access.at(0), "content", Access.at(0), "text"])
+
     Listener.update_context("assistant", text)
 
     {:ok, text}

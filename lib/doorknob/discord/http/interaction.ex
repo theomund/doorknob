@@ -24,7 +24,6 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.Voice
   alias Doorknob.OpenAI.Chat
-  alias Doorknob.OpenAI.Image
 
   require Logger
 
@@ -77,18 +76,6 @@ defmodule Doorknob.Discord.HTTP.Interaction do
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
     {:punctual, %{content: ":ear_with_hearing_aid: **Doorknob has been deafened.**"}}
-  end
-
-  defp handle(%{name: "image", options: [%{"name" => "prompt", "value" => prompt}]} = context) do
-    Logger.debug("Handling image command.")
-
-    delay(context)
-
-    {:ok, url} = Image.create(prompt)
-
-    embeds = [%{title: prompt, image: %{url: url}, url: url}]
-
-    {:delayed, %{content: ":art: **Doorknob generated an image:**", embeds: embeds}}
   end
 
   defp handle(%{name: "join"} = context) do
