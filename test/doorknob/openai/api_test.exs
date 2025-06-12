@@ -14,12 +14,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Discord.Gateway.APITest do
-  alias Doorknob.Discord.HTTP.API
+defmodule Doorknob.OpenAI.API.Test do
+  alias Doorknob.OpenAI.API
 
   use ExUnit.Case
 
-  test "Port Number" do
-    assert API.port() == 443
+  test "Headers" do
+    key = "foo"
+
+    actual = API.headers(key)
+
+    expected = %{
+      authorization: "Bearer foo",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
+
+    assert actual == expected
+  end
+
+  test "Path" do
+    assert API.path("/foo") == "https://api.openai.com/v1/foo"
+  end
+
+  test "Timeout" do
+    assert API.timeout() == 30_000
   end
 end

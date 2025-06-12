@@ -26,65 +26,73 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   use GenServer
 
-  defstruct [:id, :interval, :pid, :ref, :token]
+  defstruct [:conn, :id, :interval, :ref, :token, :websocket]
 
   @impl true
   def init(args) do
     Logger.info("Starting Discord Gateway API listener.")
 
-    opts = %{
-      protocols: [:http]
-    }
-
     host = API.host()
     path = API.path()
     port = API.port()
 
-    {:ok, pid} = :gun.open(host, port, opts)
-    {:ok, :http} = :gun.await_up(pid)
-    ref = :gun.ws_upgrade(pid, path)
+    {:ok, conn} = Mint.HTTP.connect(:https, host, port, protocols: [:http1])
+    {:ok, conn, ref} = Mint.WebSocket.upgrade(:wss, conn, path, [])
 
-    state = %__MODULE__{pid: pid, ref: ref, token: args.token}
+    http_reply_message = receive(do: (message -> message))
 
-    {:ok, state}
+    {:ok, conn, responses} = Mint.WebSocket.stream(conn, http_reply_message)
+
+    result =
+      case responses do
+        [
+          {:status, ^ref, status},
+          {:headers, ^ref, resp_headers},
+          {:data, ^ref, data},
+          {:done, ^ref}
+        ] ->
+          {:ok, conn, websocket} = Mint.WebSocket.new(conn, ref, status, resp_headers)
+          {:ok, websocket, [{:text, event}]} = Mint.WebSocket.decode(websocket, data)
+          {:ok, decoded} = JSON.decode(event)
+
+          Logger.debug("Decoded initial event: #{inspect(decoded)}.")
+
+          state = %__MODULE__{conn: conn, ref: ref, token: args.token, websocket: websocket}
+
+          Event.handle(decoded, state)
+
+        [
+          {:status, ^ref, status},
+          {:headers, ^ref, resp_headers},
+          {:done, ^ref}
+        ] ->
+          {:ok, conn, websocket} = Mint.WebSocket.new(conn, ref, status, resp_headers)
+
+          state = %__MODULE__{conn: conn, ref: ref, token: args.token, websocket: websocket}
+
+          {:ok, state}
+      end
+
+    Logger.info("Started Discord Gateway API listener.")
+
+    result
   end
 
   @impl true
-  def handle_cast({:send, frame}, state) do
-    :gun.ws_send(state.pid, state.ref, frame)
+  def handle_cast({:send, {:text, _event} = frame}, %__MODULE__{} = state) do
+    {:ok, websocket, data} = Mint.WebSocket.encode(state.websocket, frame)
+    {:ok, conn} = Mint.WebSocket.stream_request_body(state.conn, state.ref, data)
 
-    Logger.debug("Sent frame: #{inspect(frame)}")
+    state = put_in(state.conn, conn)
+    state = put_in(state.websocket, websocket)
+
+    Logger.debug("Sent text frame: #{inspect(frame)}.")
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info({:gun_upgrade, pid, ref, ["websocket"], _headers}, state) do
-    state = put_in(state.pid, pid)
-    state = put_in(state.ref, ref)
-
-    Logger.info("Successfully started Discord Gateway API listener.")
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info({:gun_ws, pid, ref, {:text, data}}, state) do
-    state = put_in(state.pid, pid)
-    state = put_in(state.ref, ref)
-
-    Logger.debug("Received text frame: #{inspect(data)}.")
-
-    {:ok, decoded} = JSON.decode(data)
-    Logger.debug("Decoded data: #{inspect(decoded)}.")
-
-    state = Event.handle(decoded, state)
-
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info(:heartbeat, state) do
+  def handle_info(:heartbeat, %__MODULE__{} = state) do
     Event.heartbeat()
 
     {:noreply, state}
@@ -92,9 +100,36 @@ defmodule Doorknob.Discord.Gateway.Listener do
 
   @impl true
   def handle_info(msg, state) do
-    Logger.debug("Received Gateway message: #{inspect(msg)}.")
+    ref = state.ref
+
+    {:ok, conn, [{:data, ^ref, data}]} = Mint.WebSocket.stream(state.conn, msg)
+    {:ok, websocket, frames} = Mint.WebSocket.decode(state.websocket, data)
+
+    state = put_in(state.conn, conn)
+    state = put_in(state.websocket, websocket)
+
+    state =
+      Enum.reduce(frames, state, fn
+        {:close, _code, _reason} = frame, state ->
+          Logger.error("Received close frame: #{inspect(frame)}.")
+          state
+
+        {:text, event} = frame, state ->
+          Logger.debug("Received text frame: #{inspect(frame)}.")
+          {:ok, decoded} = JSON.decode(event)
+          {:ok, state} = Event.handle(decoded, state)
+          state
+
+        frame, state ->
+          Logger.warning("Received unknown frame: #{inspect(frame)}.")
+          state
+      end)
 
     {:noreply, state}
+  end
+
+  def send(encoded) do
+    GenServer.cast(__MODULE__, {:send, {:text, encoded}})
   end
 
   def start_link(args) do

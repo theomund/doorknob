@@ -29,8 +29,9 @@ defmodule Doorknob.Discord.Gateway.Event do
         %{
           "op" => 0,
           "d" => %{
-            "data" => %{"name" => name},
+            "application_id" => application_id,
             "channel_id" => channel_id,
+            "data" => data,
             "guild_id" => guild_id,
             "id" => id,
             "member" => %{"user" => %{"id" => user_id}},
@@ -38,28 +39,30 @@ defmodule Doorknob.Discord.Gateway.Event do
           },
           "t" => "INTERACTION_CREATE"
         },
-        state
+        %Listener{} = state
       ) do
     Logger.info("Received interaction create event.")
 
     context = %{
-      name: name,
+      name: data["name"],
+      application_id: application_id,
       channel_id: channel_id,
       guild_id: guild_id,
       id: id,
+      options: data["options"],
       token: token,
       user_id: user_id
     }
 
     Interaction.respond(context)
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 0, "t" => "MESSAGE_CREATE"}, state) do
+  def handle(%{"op" => 0, "t" => "MESSAGE_CREATE"}, %Listener{} = state) do
     Logger.info("Received message create event.")
 
-    state
+    {:ok, state}
   end
 
   def handle(
@@ -68,42 +71,42 @@ defmodule Doorknob.Discord.Gateway.Event do
           "d" => %{"application" => %{"id" => application_id}, "guilds" => guilds},
           "t" => "READY"
         },
-        state
+        %Listener{} = state
       ) do
     Logger.info("Received ready event.")
 
     state = put_in(state.id, application_id)
 
-    :ok = Command.register(state.id, guilds)
+    Command.register(state.id, guilds)
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 0, "t" => type}, state) do
+  def handle(%{"op" => 0, "t" => type}, %Listener{} = state) do
     Logger.info("Received dispatch event: #{inspect(type)}.")
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 1}, state) do
+  def handle(%{"op" => 1}, %Listener{} = state) do
     Logger.warning("Received heartbeat event.")
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 7}, state) do
+  def handle(%{"op" => 7}, %Listener{} = state) do
     Logger.warning("Received reconnect event.")
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 9}, state) do
+  def handle(%{"op" => 9}, %Listener{} = state) do
     Logger.warning("Received invalid session event.")
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 10, "d" => data}, state) do
+  def handle(%{"op" => 10, "d" => data}, %Listener{} = state) do
     Logger.info("Received hello event.")
 
     state = put_in(state.interval, data["heartbeat_interval"])
@@ -112,27 +115,27 @@ defmodule Doorknob.Discord.Gateway.Event do
 
     Process.send_after(Listener, :heartbeat, state.interval)
 
-    state
+    {:ok, state}
   end
 
-  def handle(%{"op" => 11}, state) do
+  def handle(%{"op" => 11}, %Listener{} = state) do
     Logger.info("Received heartbeat acknowledgement event.")
 
     Process.send_after(Listener, :heartbeat, state.interval)
 
-    state
+    {:ok, state}
   end
 
-  def handle(event, state) do
-    Logger.warning("Received unhandled event: #{inspect(event)}.")
+  def handle(event, %Listener{} = state) do
+    Logger.warning("Received unknown event: #{inspect(event)}.")
 
-    state
+    {:ok, state}
   end
 
-  def heartbeat() do
+  def heartbeat do
     encoded = JSON.encode!(%{op: 1, d: 0})
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent heartbeat event.")
   end
@@ -148,7 +151,7 @@ defmodule Doorknob.Discord.Gateway.Event do
         }
       })
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent identify event.")
   end
@@ -165,7 +168,7 @@ defmodule Doorknob.Discord.Gateway.Event do
         }
       })
 
-    GenServer.cast(Listener, {:send, {:text, encoded}})
+    Listener.send(encoded)
 
     Logger.info("Sent voice state update.")
   end

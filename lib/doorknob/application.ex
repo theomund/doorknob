@@ -21,6 +21,7 @@ defmodule Doorknob.Application do
 
   alias Doorknob.Discord.Gateway
   alias Doorknob.Discord.HTTP
+  alias Doorknob.OpenAI
 
   require Logger
 
@@ -29,13 +30,14 @@ defmodule Doorknob.Application do
   def start(_type, _args) do
     Logger.info("Starting the application.")
 
-    args = %{
-      token: Application.get_env(:doorknob, :token)
-    }
+    key = Application.get_env(:doorknob, :key)
+    prompt = Application.get_env(:doorknob, :prompt)
+    token = Application.get_env(:doorknob, :token)
 
     children = [
-      {Gateway.Listener, args},
-      {HTTP.Listener, args}
+      {Gateway.Listener, %{token: token}},
+      {HTTP.Listener, %{token: token}},
+      {OpenAI.Listener, %{key: key, prompt: prompt}}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one)

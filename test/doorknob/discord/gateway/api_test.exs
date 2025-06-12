@@ -14,31 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.MixProject do
-  use Mix.Project
+defmodule Doorknob.Discord.Gateway.API.Test do
+  alias Doorknob.Discord.Gateway.API
 
-  def project do
-    [
-      app: :doorknob,
-      version: "0.1.0",
-      elixir: "~> 1.18.4",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
-    ]
+  use ExUnit.Case
+
+  test "Host" do
+    assert API.host() == "gateway.discord.gg"
   end
 
-  def application do
-    [
-      extra_applications: [:logger],
-      mod: {Doorknob.Application, []}
-    ]
+  test "Path" do
+    assert API.path() == "/?v=10&encoding=json"
   end
 
-  defp deps do
-    [
-      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:mint_web_socket, "~> 1.0.4"},
-      {:req, "~> 0.5.10"}
-    ]
+  test "Port" do
+    assert API.port() == 443
   end
 end

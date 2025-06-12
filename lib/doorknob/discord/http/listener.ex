@@ -25,19 +25,13 @@ defmodule Doorknob.Discord.HTTP.Listener do
 
   use GenServer
 
-  defstruct [:pid, :token]
+  defstruct [:token]
 
   @impl true
   def init(args) do
     Logger.info("Starting Discord HTTP API listener.")
 
-    host = API.host()
-    port = API.port()
-
-    {:ok, pid} = :gun.open(host, port)
-    {:ok, :http2} = :gun.await_up(pid)
-
-    state = %__MODULE__{pid: pid, token: args.token}
+    state = %__MODULE__{token: args.token}
 
     Logger.info("Successfully started Discord HTTP API listener.")
 
@@ -45,51 +39,77 @@ defmodule Doorknob.Discord.HTTP.Listener do
   end
 
   @impl true
-  def handle_call({:get, path}, _from, state) do
-    headers = API.headers(state)
+  def handle_call({:get, path}, _from, %__MODULE__{} = state) do
+    headers = API.headers(state.token)
 
-    ref = :gun.get(state.pid, path, headers)
+    Logger.debug("Sending GET request: (path: #{path}, headers: #{inspect(headers)}).")
 
-    Logger.debug("Sent GET request: (path: #{path}, headers: #{inspect(headers)}).")
+    response = Req.get!(path, headers: headers)
 
-    {:ok, body} = :gun.await_body(state.pid, ref)
+    Logger.debug("Received GET response: #{inspect(response)}")
 
-    {:ok, decoded} = JSON.decode(body)
-
-    {:reply, decoded, state}
+    {:reply, response.body, state}
   end
 
   @impl true
-  def handle_cast({:post, path, body}, state) do
-    headers = API.headers(state)
-
-    :gun.post(state.pid, path, headers, body)
+  def handle_cast({:post, path, body}, %__MODULE__{} = state) do
+    headers = API.headers(state.token)
 
     Logger.debug(
-      "Sent POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending POST request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
+
+    response = Req.post!(path, headers: headers, json: body)
+
+    Logger.debug("Received POST response: #{inspect(response)}.")
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_cast({:put, path, body}, state) do
-    headers = API.headers(state)
-
-    :gun.put(state.pid, path, headers, body)
+  def handle_cast({:patch, path, body}, %__MODULE__{} = state) do
+    headers = API.headers(state.token)
 
     Logger.debug(
-      "Sent PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+      "Sending PATCH request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
     )
+
+    response = Req.patch!(path, headers: headers, json: body)
+
+    Logger.debug("Received PATCH response: #{inspect(response)}.")
 
     {:noreply, state}
   end
 
   @impl true
-  def handle_info(msg, state) do
-    Logger.debug("Received HTTP message: #{inspect(msg)}.")
+  def handle_cast({:put, path, body}, %__MODULE__{} = state) do
+    headers = API.headers(state.token)
+
+    Logger.debug(
+      "Sending PUT request: (path: #{path}, headers: #{inspect(headers)}, body: #{inspect(body)})."
+    )
+
+    response = Req.put!(path, headers: headers, json: body)
+
+    Logger.debug("Received PUT response: #{inspect(response)}.")
 
     {:noreply, state}
+  end
+
+  def get(path) do
+    GenServer.call(__MODULE__, {:get, path})
+  end
+
+  def patch(path, body) do
+    GenServer.cast(__MODULE__, {:patch, path, body})
+  end
+
+  def post(path, body) do
+    GenServer.cast(__MODULE__, {:post, path, body})
+  end
+
+  def put(path, body) do
+    GenServer.cast(__MODULE__, {:put, path, body})
   end
 
   def start_link(args) do

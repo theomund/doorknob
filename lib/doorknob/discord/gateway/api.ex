@@ -21,21 +21,21 @@ defmodule Doorknob.Discord.Gateway.API do
 
   @url "wss://gateway.discord.gg/?v=10&encoding=json"
 
-  def host() do
+  def host do
     uri = uri()
-    :binary.bin_to_list(uri.host)
+    uri.host
   end
 
-  def path() do
+  def path do
     uri = uri()
-    :binary.bin_to_list(uri.path <> "?" <> uri.query)
+    uri.path <> "?" <> uri.query
   end
 
-  def port() do
+  def port do
     443
   end
 
-  defp uri() do
+  defp uri do
     URI.parse(@url)
   end
 end

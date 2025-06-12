@@ -14,31 +14,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.MixProject do
-  use Mix.Project
+defmodule Doorknob.OpenAI.Chat do
+  @moduledoc """
+  Functions for handling chats.
+  """
 
-  def project do
-    [
-      app: :doorknob,
-      version: "0.1.0",
-      elixir: "~> 1.18.4",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
-    ]
-  end
+  alias Doorknob.OpenAI.API
+  alias Doorknob.OpenAI.Listener
 
-  def application do
-    [
-      extra_applications: [:logger],
-      mod: {Doorknob.Application, []}
-    ]
-  end
+  require Logger
 
-  defp deps do
-    [
-      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:mint_web_socket, "~> 1.0.4"},
-      {:req, "~> 0.5.10"}
-    ]
+  def create(message) do
+    path = API.path("/responses")
+
+    context = Listener.update_context("user", message)
+    body = %{input: context, model: "gpt-4.1", store: false}
+
+    Logger.debug("Created chat request: #{inspect(body)}.")
+
+    response = Listener.post(path, body)
+
+    Logger.debug("Received chat response: #{inspect(response)}.")
+
+    text = get_in(response, ["output", Access.at(0), "content", Access.at(0), "text"])
+
+    Listener.update_context("assistant", text)
+
+    {:ok, text}
   end
 end

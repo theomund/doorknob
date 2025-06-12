@@ -23,19 +23,44 @@ defmodule Doorknob.Discord.HTTP.Interaction do
   alias Doorknob.Discord.HTTP.API
   alias Doorknob.Discord.HTTP.Listener
   alias Doorknob.Discord.HTTP.Voice
+  alias Doorknob.OpenAI.Chat
 
   require Logger
 
   def respond(context) do
+    {timeliness, data} = handle(context)
+
+    case timeliness do
+      :punctual ->
+        path = API.path("/interactions/#{context.id}/#{context.token}/callback")
+        body = %{type: 4, data: data}
+        Logger.debug("Sending punctual interaction response: #{inspect(body)}.")
+        Listener.post(path, body)
+
+      :delayed ->
+        path = API.path("/webhooks/#{context.application_id}/#{context.token}/messages/@original")
+        body = data
+        Logger.debug("Sending delayed interaction response: #{inspect(body)}.")
+        Listener.patch(path, body)
+    end
+  end
+
+  defp delay(context) do
     path = API.path("/interactions/#{context.id}/#{context.token}/callback")
 
-    content = handle(context)
+    body = %{type: 5}
 
-    body = JSON.encode!(%{type: 4, data: %{content: content}})
+    Listener.post(path, body)
+  end
 
-    Logger.debug("Sending interaction response: #{body}.")
+  defp handle(%{name: "chat", options: [%{"name" => "message", "value" => message}]} = context) do
+    Logger.debug("Handling chat command.")
 
-    GenServer.cast(Listener, {:post, path, body})
+    delay(context)
+
+    {:ok, text} = Chat.create(message)
+
+    {:delayed, %{content: ":speaking_head: **Doorknob responded:**\n\n#{text}"}}
   end
 
   defp handle(%{name: "deafen"} = context) do
@@ -50,7 +75,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":ear_with_hearing_aid: **Doorknob has been deafened.**"
+    {:punctual, %{content: ":ear_with_hearing_aid: **Doorknob has been deafened.**"}}
   end
 
   defp handle(%{name: "join"} = context) do
@@ -65,7 +90,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":wave: **Doorknob has joined the call.**"
+    {:punctual, %{content: ":wave: **Doorknob has joined the call.**"}}
   end
 
   defp handle(%{name: "leave"} = context) do
@@ -80,7 +105,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":door: **Doorknob has left the call.**"
+    {:punctual, %{content: ":door: **Doorknob has left the call.**"}}
   end
 
   defp handle(%{name: "mute"} = context) do
@@ -95,13 +120,13 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":mute: **Doorknob has been muted.**"
+    {:punctual, %{content: ":mute: **Doorknob has been muted.**"}}
   end
 
   defp handle(%{name: "ping"}) do
     Logger.debug("Handling ping command.")
 
-    ":white_check_mark: **Doorknob is online.**"
+    {:punctual, %{content: ":white_check_mark: **Doorknob is online.**"}}
   end
 
   defp handle(%{name: "undeafen"} = context) do
@@ -116,7 +141,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":ear: **Doorknob has been undeafened.**"
+    {:punctual, %{content: ":ear: **Doorknob has been undeafened.**"}}
   end
 
   defp handle(%{name: "unmute"} = context) do
@@ -131,7 +156,7 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     Event.update_voice_state(channel_id, guild_id, self_deaf, self_mute)
 
-    ":speaker: **Doorknob has been unmuted.**"
+    {:punctual, %{content: ":speaker: **Doorknob has been unmuted.**"}}
   end
 
   defp handle(%{name: "uptime"}) do
@@ -139,12 +164,12 @@ defmodule Doorknob.Discord.HTTP.Interaction do
 
     {uptime, _} = :erlang.statistics(:wall_clock)
 
-    ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"
+    {:punctual, %{content: ":clock5: **Doorknob has been online for #{uptime / 1000} seconds.**"}}
   end
 
   defp handle(%{name: name}) do
     Logger.warning("Handling unimplemented command: '#{name}'.")
 
-    ":warning: **Doorknob can't handle this command yet.**"
+    {:punctual, %{content: ":warning: **Doorknob can't handle this command yet.**"}}
   end
 end

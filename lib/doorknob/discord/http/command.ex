@@ -32,31 +32,36 @@ defmodule Doorknob.Discord.HTTP.Command do
 
   defp register_global(application_id) do
     path = API.path("/applications/#{application_id}/commands")
-    body = JSON.encode!([])
+    body = []
 
-    Logger.debug("Registering global commands: #{body}.")
+    Logger.debug("Registering global commands: #{inspect(body)}.")
 
-    GenServer.cast(Listener, {:put, path, body})
+    Listener.put(path, body)
   end
 
   defp register_guild(application_id, guild_id) do
     path = API.path("/applications/#{application_id}/guilds/#{guild_id}/commands")
 
-    deafen = %{name: "deafen", description: "Deafen the bot."}
-    join = %{name: "join", description: "Force the bot to join the call."}
-    leave = %{name: "leave", description: "Force the bot to leave the call."}
-    mute = %{name: "mute", description: "Mute the bot."}
-    ping = %{name: "ping", description: "Receive a simple diagnostic response."}
-    undeafen = %{name: "undeafen", description: "Undeafen the bot."}
-    unmute = %{name: "unmute", description: "Unmute the bot."}
-    uptime = %{name: "uptime", description: "Receive the uptime of the bot."}
+    body = [
+      %{
+        name: "chat",
+        description: "Chat with the bot.",
+        options: [
+          %{name: "message", description: "The message to send.", required: true, type: 3}
+        ]
+      },
+      %{name: "deafen", description: "Deafen the bot."},
+      %{name: "join", description: "Force the bot to join the call."},
+      %{name: "leave", description: "Force the bot to leave the call."},
+      %{name: "mute", description: "Mute the bot."},
+      %{name: "ping", description: "Receive a simple diagnostic response."},
+      %{name: "undeafen", description: "Undeafen the bot."},
+      %{name: "unmute", description: "Unmute the bot."},
+      %{name: "uptime", description: "Receive the uptime of the bot."}
+    ]
 
-    commands = [deafen, join, leave, mute, ping, undeafen, unmute, uptime]
+    Logger.debug("Registering guild commands: #{inspect(body)}")
 
-    body = JSON.encode!(commands)
-
-    Logger.debug("Registering guild commands: #{body}")
-
-    GenServer.cast(Listener, {:put, path, body})
+    Listener.put(path, body)
   end
 end

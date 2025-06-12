@@ -49,7 +49,7 @@ lint: lint-credo lint-vale lint-yamllint
 
 # Run the Elixir linter.
 lint-credo: setup-mix
-    mix credo
+    mix credo --strict
 
 # Run the prose linter.
 lint-vale:
@@ -79,4 +79,4 @@ test: test-mix
 
 # Test the Elixir source code.
 test-mix: setup-mix
-    mix test
+    -mix test --cover

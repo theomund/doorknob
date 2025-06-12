@@ -14,31 +14,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Doorknob.MixProject do
-  use Mix.Project
+defmodule Doorknob.OpenAI.API do
+  @moduledoc """
+  Functions for the OpenAI API.
+  """
 
-  def project do
-    [
-      app: :doorknob,
-      version: "0.1.0",
-      elixir: "~> 1.18.4",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
-    ]
+  @url "https://api.openai.com/v1"
+
+  def headers(key) do
+    %{
+      authorization: "Bearer #{key}",
+      "content-type": "application/json",
+      "user-agent": "Doorknob (https://github.com/theomund/doorknob, 0.1.0)"
+    }
   end
 
-  def application do
-    [
-      extra_applications: [:logger],
-      mod: {Doorknob.Application, []}
-    ]
+  def path(subpath) do
+    @url <> subpath
   end
 
-  defp deps do
-    [
-      {:credo, "~> 1.7.12", only: [:dev, :test], runtime: false},
-      {:mint_web_socket, "~> 1.0.4"},
-      {:req, "~> 0.5.10"}
-    ]
+  def timeout do
+    30_000
   end
 end
