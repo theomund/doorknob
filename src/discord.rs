@@ -16,8 +16,22 @@
 
 use std::env;
 
+use anyhow::Error;
+use poise::{Command, Framework, FrameworkOptions};
 use serenity::{Client, all::GatewayIntents};
-use tracing::error;
+use tracing::{error, info};
+
+struct Data {}
+type Context<'a> = poise::Context<'a, Data, Error>;
+
+#[poise::command(slash_command)]
+async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling ping command");
+
+    ctx.reply(":white_check_mark: **Doorknob is online.**").await?;
+
+    Ok(())
+}
 
 pub async fn init() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token to be specified");
@@ -26,11 +40,38 @@ pub async fn init() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
+    let options = FrameworkOptions {
+        commands: vec![ping()],
+        ..Default::default()
+    };
+
+    let framework = Framework::builder()
+        .options(options)
+        .setup(|ctx, ready, framework| {
+            Box::pin(async move {
+                let global_commands: Vec<Command<Context, Error>> = Vec::new();
+
+                poise::builtins::register_globally(ctx, &global_commands).await?;
+
+                let guild_commands = &framework.options().commands;
+
+                for guild in &ready.guilds {
+                    poise::builtins::register_in_guild(ctx, guild_commands, guild.id).await?;
+                }
+
+                let data = Data {};
+
+                Ok(data)
+            })
+        })
+        .build();
+
     let mut client = Client::builder(token, intents)
+        .framework(framework)
         .await
         .expect("Failed to create client");
 
     if let Err(why) = client.start().await {
-        error!("Failed to start client: {why:?}")
+        error!("Failed to start client: {why:?}");
     }
 }
