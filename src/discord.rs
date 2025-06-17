@@ -14,21 +14,37 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::env;
+use std::{env, time::Instant};
 
 use anyhow::Error;
 use poise::{Command, Framework, FrameworkOptions};
 use serenity::{Client, all::GatewayIntents};
 use tracing::{error, info};
 
-struct Data {}
+struct Data {
+    start_time: Instant,
+}
+
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[poise::command(slash_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling ping command");
 
-    ctx.reply(":white_check_mark: **Doorknob is online.**").await?;
+    ctx.reply(":white_check_mark: **Doorknob is online.**")
+        .await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling uptime command");
+
+    let elapsed = ctx.data().start_time.elapsed().as_secs();
+    let message = format!(":clock5: **Doorknob has been online for {elapsed} seconds.**");
+
+    ctx.reply(message).await?;
 
     Ok(())
 }
@@ -41,7 +57,7 @@ pub async fn init() {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let options = FrameworkOptions {
-        commands: vec![ping()],
+        commands: vec![ping(), uptime()],
         ..Default::default()
     };
 
@@ -59,7 +75,8 @@ pub async fn init() {
                     poise::builtins::register_in_guild(ctx, guild_commands, guild.id).await?;
                 }
 
-                let data = Data {};
+                let start_time = Instant::now();
+                let data = Data { start_time };
 
                 Ok(data)
             })
