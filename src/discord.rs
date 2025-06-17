@@ -14,9 +14,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use tracing::info;
+use std::env;
 
-pub fn init() {
-    tracing_subscriber::fmt::init();
-    info!("Initialized the logging system")
+use serenity::{Client, all::GatewayIntents};
+use tracing::error;
+
+pub async fn init() {
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token to be specified");
+
+    let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::DIRECT_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT;
+
+    let mut client = Client::builder(token, intents)
+        .await
+        .expect("Failed to create client");
+
+    if let Err(why) = client.start().await {
+        error!("Failed to start client: {why:?}")
+    }
 }
