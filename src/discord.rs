@@ -52,8 +52,27 @@ impl EventHandler for TrackErrorNotifier {
 async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling deafen command");
 
-    ctx.reply(":ear_with_hearing_aid: **Doorknob is now deafened.**")
-        .await?;
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    let guild_id = ctx.guild_id().unwrap();
+
+    let Some(handler_lock) = manager.get(guild_id) else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_deaf() {
+        ctx.reply(":x: **Doorknob is already deafened.**").await?;
+    } else {
+        handler.deafen(true).await?;
+
+        ctx.reply(":ear_with_hearing_aid: **Doorknob is now deafened.**")
+            .await?;
+    }
 
     Ok(())
 }
@@ -125,7 +144,26 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
 async fn mute(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling mute command");
 
-    ctx.reply(":mute: **Doorknob is now muted.**").await?;
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    let guild_id = ctx.guild_id().unwrap();
+
+    let Some(handler_lock) = manager.get(guild_id) else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_mute() {
+        ctx.reply(":x: **Doorknob is already muted.**").await?;
+    } else {
+        handler.mute(true).await?;
+
+        ctx.reply(":mute: **Doorknob is now muted.**").await?;
+    }
 
     Ok(())
 }
@@ -146,7 +184,26 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling undeafen command");
 
-    ctx.reply(":ear: **Doorknob is now undeafened.**").await?;
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    let guild_id = ctx.guild_id().unwrap();
+
+    let Some(handler_lock) = manager.get(guild_id) else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_deaf() {
+        handler.deafen(false).await?;
+
+        ctx.reply(":ear: **Doorknob is now undeafened.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob is already undeafened.**").await?;
+    }
 
     Ok(())
 }
@@ -156,7 +213,26 @@ async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
 async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling unmute command");
 
-    ctx.reply(":speaker: **Doorknob is now unmuted.**").await?;
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    let guild_id = ctx.guild_id().unwrap();
+
+    let Some(handler_lock) = manager.get(guild_id) else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_mute() {
+        handler.mute(false).await?;
+
+        ctx.reply(":speaker: **Doorknob is now unmuted.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob is already unmuted.**").await?;
+    }
 
     Ok(())
 }
