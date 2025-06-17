@@ -19,7 +19,7 @@ use std::{env, time::Instant};
 use anyhow::Error;
 use poise::{Command, Framework, FrameworkOptions};
 use serenity::{Client, all::GatewayIntents};
-use tracing::{error, info};
+use tracing::info;
 
 struct Data {
     start_time: Instant,
@@ -113,8 +113,8 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn init() {
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token to be specified");
+pub async fn init() -> Result<(), Error> {
+    let token = env::var("DISCORD_TOKEN")?;
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
@@ -156,12 +156,9 @@ pub async fn init() {
         })
         .build();
 
-    let mut client = Client::builder(token, intents)
-        .framework(framework)
-        .await
-        .expect("Failed to create client");
+    let mut client = Client::builder(token, intents).framework(framework).await?;
 
-    if let Err(why) = client.start().await {
-        error!("Failed to start client: {why:?}");
-    }
+    client.start().await?;
+
+    Ok(())
 }

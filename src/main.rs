@@ -16,11 +16,15 @@
 
 #![warn(clippy::pedantic)]
 
+use anyhow::Error;
+
 mod discord;
 mod logging;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Error> {
     logging::init();
-    discord::init().await;
+    discord::init().await?;
+
+    Ok(())
 }
