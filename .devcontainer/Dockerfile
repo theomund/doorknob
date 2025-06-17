@@ -18,12 +18,14 @@ FROM quay.io/fedora/fedora:42
 RUN dnf copr enable -y theomund/copr \
     && dnf install -y \
     bash-completion-2.16 \
+    cmake-3.31.6 \
     gawk-5.3.1 \
     gcc-15.1.1 \
     git-2.49.0 \
     gnupg2-2.4.7 \
     just-1.40.0 \
     lldb-20.1.6 \
+    opus-devel-1.5.2 \
     rustup-1.28.2 \
     vale-3.12.0 \
     yamllint-1.37.1 \

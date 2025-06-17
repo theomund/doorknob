@@ -17,8 +17,9 @@
 use std::{env, time::Instant};
 
 use anyhow::Error;
-use poise::{Command, Framework, FrameworkOptions};
+use poise::{Command, Framework, FrameworkOptions, async_trait};
 use serenity::{Client, all::GatewayIntents};
+use songbird::{Event, EventContext, EventHandler, SerenityInit, TrackEvent};
 use tracing::info;
 
 struct Data {
@@ -26,6 +27,25 @@ struct Data {
 }
 
 type Context<'a> = poise::Context<'a, Data, Error>;
+
+struct TrackErrorNotifier;
+
+#[async_trait]
+impl EventHandler for TrackErrorNotifier {
+    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
+        if let EventContext::Track(track_list) = ctx {
+            for (state, handle) in *track_list {
+                println!(
+                    "Track {:?} encountered an error: {:?}",
+                    handle.uuid(),
+                    state.playing
+                );
+            }
+        }
+
+        None
+    }
+}
 
 /// Deafen the bot.
 #[poise::command(slash_command)]
@@ -43,6 +63,36 @@ async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
 async fn join(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling join command");
 
+    let (guild_id, channel_id) = {
+        let guild = ctx.guild().unwrap();
+
+        let guild_id = guild.id;
+
+        let author_id = &ctx.author().id;
+
+        let channel_id = guild
+            .voice_states
+            .get(author_id)
+            .and_then(|voice_state| voice_state.channel_id);
+
+        (guild_id, channel_id)
+    };
+
+    let Some(channel) = channel_id else {
+        ctx.reply(":x: **Doorknob couldn't find your voice call.**")
+            .await?;
+
+        return Ok(());
+    };
+
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    if let Ok(handler_lock) = manager.join(guild_id, channel).await {
+        let mut handler = handler_lock.lock().await;
+        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+    }
+
     ctx.reply(":wave: **Doorknob has joined the call.**")
         .await?;
 
@@ -54,7 +104,18 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
 async fn leave(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling leave command");
 
-    ctx.reply(":door: **Doorknob has left the call.**").await?;
+    let context = ctx.serenity_context();
+    let manager = songbird::get(context).await.unwrap().clone();
+
+    let guild_id = ctx.guild_id().unwrap();
+    let has_handler = manager.get(guild_id).is_some();
+
+    if has_handler {
+        manager.remove(guild_id).await?;
+        ctx.reply(":door: **Doorknob has left the call.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+    }
 
     Ok(())
 }
@@ -116,9 +177,7 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn init() -> Result<(), Error> {
     let token = env::var("DISCORD_TOKEN")?;
 
-    let intents = GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
 
     let options = FrameworkOptions {
         commands: vec![
@@ -156,7 +215,10 @@ pub async fn init() -> Result<(), Error> {
         })
         .build();
 
-    let mut client = Client::builder(token, intents).framework(framework).await?;
+    let mut client = Client::builder(token, intents)
+        .framework(framework)
+        .register_songbird()
+        .await?;
 
     client.start().await?;
 

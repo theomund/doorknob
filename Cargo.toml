@@ -24,6 +24,7 @@ version = "0.1.0"
 anyhow = "1.0.98"
 poise = "0.6.1"
 serenity = "0.12.4"
+songbird = "0.5.0"
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
