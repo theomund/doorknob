@@ -14,8 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod logging;
+use tracing::info;
 
-fn main() {
-    logging::init();
+pub fn init() {
+    tracing_subscriber::fmt::init();
+    info!("Initialized the logging system.")
 }
