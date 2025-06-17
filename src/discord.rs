@@ -27,6 +27,49 @@ struct Data {
 
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+/// Deafen the bot.
+#[poise::command(slash_command)]
+async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling deafen command");
+
+    ctx.reply(":ear_with_hearing_aid: **Doorknob is now deafened.**")
+        .await?;
+
+    Ok(())
+}
+
+/// Make the bot join the call.
+#[poise::command(slash_command)]
+async fn join(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling join command");
+
+    ctx.reply(":wave: **Doorknob has joined the call.**")
+        .await?;
+
+    Ok(())
+}
+
+/// Make the bot leave the call.
+#[poise::command(slash_command)]
+async fn leave(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling leave command");
+
+    ctx.reply(":door: **Doorknob has left the call.**").await?;
+
+    Ok(())
+}
+
+/// Mute the bot.
+#[poise::command(slash_command)]
+async fn mute(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling mute command");
+
+    ctx.reply(":mute: **Doorknob is now muted.**").await?;
+
+    Ok(())
+}
+
+/// Receive a simple diagnostic response.
 #[poise::command(slash_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling ping command");
@@ -37,6 +80,27 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Undeafen the bot.
+#[poise::command(slash_command)]
+async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling undeafen command");
+
+    ctx.reply(":ear: **Doorknob is now undeafened.**").await?;
+
+    Ok(())
+}
+
+/// Unmute the bot.
+#[poise::command(slash_command)]
+async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling unmute command");
+
+    ctx.reply(":speaker: **Doorknob is now unmuted.**").await?;
+
+    Ok(())
+}
+
+/// Retrieve the bot's uptime.
 #[poise::command(slash_command)]
 async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling uptime command");
@@ -57,7 +121,16 @@ pub async fn init() {
         | GatewayIntents::MESSAGE_CONTENT;
 
     let options = FrameworkOptions {
-        commands: vec![ping(), uptime()],
+        commands: vec![
+            deafen(),
+            join(),
+            leave(),
+            mute(),
+            ping(),
+            undeafen(),
+            unmute(),
+            uptime(),
+        ],
         ..Default::default()
     };
 
