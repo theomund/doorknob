@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{env, time::Instant};
+use std::{env, sync::Arc, time::Instant};
 
 use anyhow::Error;
 use poise::{Command, Framework, FrameworkOptions, async_trait};
 use serenity::{Client, all::GatewayIntents};
-use songbird::{Event, EventContext, EventHandler, SerenityInit, TrackEvent};
+use songbird::{Call, Event, EventContext, EventHandler, SerenityInit, Songbird, TrackEvent};
+use tokio::sync::Mutex;
 use tracing::info;
 
 struct Data {
@@ -52,12 +53,7 @@ impl EventHandler for TrackErrorNotifier {
 async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling deafen command");
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
-
-    let guild_id = ctx.guild_id().unwrap();
-
-    let Some(handler_lock) = manager.get(guild_id) else {
+    let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
 
         return Ok(());
@@ -104,8 +100,7 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
         return Ok(());
     };
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
+    let manager = manager(ctx).await;
 
     if let Ok(handler_lock) = manager.join(guild_id, channel).await {
         let mut handler = handler_lock.lock().await;
@@ -123,8 +118,7 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
 async fn leave(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling leave command");
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
+    let manager = manager(ctx).await;
 
     let guild_id = ctx.guild_id().unwrap();
     let has_handler = manager.get(guild_id).is_some();
@@ -144,12 +138,7 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
 async fn mute(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling mute command");
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
-
-    let guild_id = ctx.guild_id().unwrap();
-
-    let Some(handler_lock) = manager.get(guild_id) else {
+    let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
 
         return Ok(());
@@ -184,12 +173,7 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling undeafen command");
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
-
-    let guild_id = ctx.guild_id().unwrap();
-
-    let Some(handler_lock) = manager.get(guild_id) else {
+    let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
 
         return Ok(());
@@ -213,12 +197,7 @@ async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
 async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
     info!("Handling unmute command");
 
-    let context = ctx.serenity_context();
-    let manager = songbird::get(context).await.unwrap().clone();
-
-    let guild_id = ctx.guild_id().unwrap();
-
-    let Some(handler_lock) = manager.get(guild_id) else {
+    let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
 
         return Ok(());
@@ -248,6 +227,19 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     ctx.reply(message).await?;
 
     Ok(())
+}
+
+async fn handler(ctx: Context<'_>) -> Option<Arc<Mutex<Call>>> {
+    let manager = manager(ctx).await;
+    let guild_id = ctx.guild_id().unwrap();
+
+    manager.get(guild_id)
+}
+
+async fn manager(ctx: Context<'_>) -> Arc<Songbird> {
+    let context = ctx.serenity_context();
+
+    songbird::get(context).await.unwrap().clone()
 }
 
 pub async fn init() -> Result<(), Error> {
