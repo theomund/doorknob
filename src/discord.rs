@@ -26,10 +26,12 @@ use std::{
 use anyhow::Error;
 use dashmap::DashMap;
 use poise::{Command, Framework, FrameworkOptions, async_trait};
+use reqwest::Client as HttpClient;
 use serenity::{Client, all::GatewayIntents};
 use songbird::{
     Call, CoreEvent, Event, EventContext, EventHandler, SerenityInit, Songbird,
     events::context_data::VoiceTick,
+    input::YoutubeDl,
     model::{id::UserId, payload::Speaking},
 };
 use tokio::sync::Mutex;
@@ -254,6 +256,52 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Have the bot play audio.
+#[poise::command(slash_command)]
+async fn play(ctx: Context<'_>, url: String) -> Result<(), Error> {
+    info!("Handling play command.");
+
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    let client = HttpClient::new();
+
+    let input = YoutubeDl::new(client, url);
+
+    handler.play_input(input.into());
+
+    ctx.reply(":loud_sound: **Doorknob is now playing audio.**")
+        .await?;
+
+    Ok(())
+}
+
+/// Have the bot stop playing audio.
+#[poise::command(slash_command)]
+async fn stop(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling stop command.");
+
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    handler.stop();
+
+    ctx.reply(":mute: **Doorknob has stopped playing audio.**")
+        .await?;
+
+    Ok(())
+}
+
 /// Undeafen the bot.
 #[poise::command(slash_command)]
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
@@ -340,6 +388,8 @@ pub async fn init() -> Result<(), Error> {
             leave(),
             mute(),
             ping(),
+            play(),
+            stop(),
             undeafen(),
             unmute(),
             uptime(),

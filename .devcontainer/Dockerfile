@@ -25,10 +25,12 @@ RUN dnf copr enable -y theomund/copr \
     gnupg2-2.4.7 \
     just-1.40.0 \
     lldb-20.1.6 \
+    openssl-devel-3.2.4 \
     opus-devel-1.5.2 \
     rustup-1.28.2 \
     vale-3.12.0 \
     yamllint-1.37.1 \
+    yt-dlp-2025.05.22 \
     && dnf clean all
 RUN useradd -m developer
 USER developer
