@@ -29,6 +29,7 @@ use poise::{Command, Framework, FrameworkOptions, async_trait};
 use serenity::{Client, all::GatewayIntents};
 use songbird::{
     Call, CoreEvent, Event, EventContext, EventHandler, SerenityInit, Songbird,
+    events::context_data::VoiceTick,
     model::{id::UserId, payload::Speaking},
 };
 use tokio::sync::Mutex;
@@ -51,7 +52,7 @@ struct InnerReceiver {
 }
 
 impl Receiver {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             inner: Arc::new(InnerReceiver {
                 last_tick_was_empty: AtomicBool::default(),
@@ -59,48 +60,62 @@ impl Receiver {
             }),
         }
     }
+
+    fn handle_client_disconnect() {
+        info!("Received client disconnect event.");
+    }
+
+    fn handle_rtcp_packet() {
+        info!("Received RTCP packet event.");
+    }
+
+    fn handle_rtp_packet() {
+        info!("Received RTP packet event.");
+    }
+
+    fn handle_speaking_state_update(&self, ssrc: u32, user_id: Option<&UserId>) {
+        info!("Received speaking state update event.");
+
+        if let Some(user) = user_id {
+            self.inner.known_ssrcs.insert(ssrc, *user);
+        }
+    }
+
+    fn handle_voice_tick(&self, tick: &VoiceTick) {
+        let speaking = tick.speaking.len();
+        let total_participants = speaking + tick.silent.len();
+        let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
+
+        if speaking == 0 && !last_tick_was_empty {
+            info!("Received voice tick with no speakers.");
+
+            self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
+        } else if speaking != 0 {
+            info!("Received voice tick with {speaking}/{total_participants} speakers.");
+
+            self.inner
+                .last_tick_was_empty
+                .store(false, Ordering::SeqCst);
+        }
+    }
+
+    fn handle_unknown() {
+        warn!("Received unexpected event.");
+    }
 }
 
 #[async_trait]
 impl EventHandler for Receiver {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         match ctx {
-            EventContext::ClientDisconnect(_) => {
-                info!("Received client disconnect event.");
-            }
-            EventContext::RtcpPacket(_) => {
-                info!("Received RTCP packet event.");
-            }
-            EventContext::RtpPacket(_) => {
-                info!("Received RTP packet event.");
-            }
+            EventContext::ClientDisconnect(_) => Receiver::handle_client_disconnect(),
+            EventContext::RtcpPacket(_) => Receiver::handle_rtcp_packet(),
+            EventContext::RtpPacket(_) => Receiver::handle_rtp_packet(),
             EventContext::SpeakingStateUpdate(Speaking { ssrc, user_id, .. }) => {
-                info!("Received speaking state update event.");
-
-                if let Some(user) = user_id {
-                    self.inner.known_ssrcs.insert(*ssrc, *user);
-                }
+                self.handle_speaking_state_update(*ssrc, user_id.as_ref());
             }
-            EventContext::VoiceTick(tick) => {
-                let speaking = tick.speaking.len();
-                let total_participants = speaking + tick.silent.len();
-                let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
-
-                if speaking == 0 && !last_tick_was_empty {
-                    info!("Received voice tick with no speakers.");
-
-                    self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
-                } else if speaking != 0 {
-                    info!("Received voice tick with {speaking}/{total_participants} speakers.");
-
-                    self.inner
-                        .last_tick_was_empty
-                        .store(false, Ordering::SeqCst);
-                }
-            }
-            _ => {
-                warn!("Received unexpected event.");
-            }
+            EventContext::VoiceTick(tick) => self.handle_voice_tick(tick),
+            _ => Receiver::handle_unknown(),
         }
 
         None
