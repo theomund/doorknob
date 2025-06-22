@@ -14,14 +14,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{env, sync::Arc, time::Instant};
+use std::{
+    env,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Instant,
+};
 
 use anyhow::Error;
+use dashmap::DashMap;
 use poise::{Command, Framework, FrameworkOptions, async_trait};
 use serenity::{Client, all::GatewayIntents};
-use songbird::{Call, Event, EventContext, EventHandler, SerenityInit, Songbird, TrackEvent};
+use songbird::{
+    Call, CoreEvent, Event, EventContext, EventHandler, SerenityInit, Songbird,
+    model::{id::UserId, payload::Speaking},
+};
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, warn};
 
 struct Data {
     start_time: Instant,
@@ -29,18 +40,66 @@ struct Data {
 
 type Context<'a> = poise::Context<'a, Data, Error>;
 
-struct TrackErrorNotifier;
+#[derive(Clone)]
+struct Receiver {
+    inner: Arc<InnerReceiver>,
+}
+
+struct InnerReceiver {
+    last_tick_was_empty: AtomicBool,
+    known_ssrcs: DashMap<u32, UserId>,
+}
+
+impl Receiver {
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(InnerReceiver {
+                last_tick_was_empty: AtomicBool::default(),
+                known_ssrcs: DashMap::new(),
+            }),
+        }
+    }
+}
 
 #[async_trait]
-impl EventHandler for TrackErrorNotifier {
+impl EventHandler for Receiver {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
-        if let EventContext::Track(track_list) = ctx {
-            for (state, handle) in *track_list {
-                println!(
-                    "Track {:?} encountered an error: {:?}",
-                    handle.uuid(),
-                    state.playing
-                );
+        match ctx {
+            EventContext::ClientDisconnect(_) => {
+                info!("Received client disconnect event.");
+            }
+            EventContext::RtcpPacket(_) => {
+                info!("Received RTCP packet event.");
+            }
+            EventContext::RtpPacket(_) => {
+                info!("Received RTP packet event.");
+            }
+            EventContext::SpeakingStateUpdate(Speaking { ssrc, user_id, .. }) => {
+                info!("Received speaking state update event.");
+
+                if let Some(user) = user_id {
+                    self.inner.known_ssrcs.insert(*ssrc, *user);
+                }
+            }
+            EventContext::VoiceTick(tick) => {
+                let speaking = tick.speaking.len();
+                let total_participants = speaking + tick.silent.len();
+                let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
+
+                if speaking == 0 && !last_tick_was_empty {
+                    info!("Received voice tick with no speakers.");
+
+                    self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
+                } else if speaking != 0 {
+                    info!("Received voice tick with {speaking}/{total_participants} speakers.");
+
+                    self.inner
+                        .last_tick_was_empty
+                        .store(false, Ordering::SeqCst);
+                }
+            }
+            _ => {
+                warn!("Received unexpected event.");
             }
         }
 
@@ -51,7 +110,7 @@ impl EventHandler for TrackErrorNotifier {
 /// Deafen the bot.
 #[poise::command(slash_command)]
 async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling deafen command");
+    info!("Handling deafen command.");
 
     let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
@@ -76,7 +135,7 @@ async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
 /// Make the bot join the call.
 #[poise::command(slash_command)]
 async fn join(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling join command");
+    info!("Handling join command.");
 
     let (guild_id, channel_id) = {
         let guild = ctx.guild().unwrap();
@@ -102,13 +161,25 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
 
     let manager = manager(ctx).await;
 
-    if let Ok(handler_lock) = manager.join(guild_id, channel).await {
+    {
+        let handler_lock = manager.get_or_insert(guild_id);
         let mut handler = handler_lock.lock().await;
-        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+
+        let receiver = Receiver::new();
+
+        handler.add_global_event(CoreEvent::ClientDisconnect.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::RtcpPacket.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::RtpPacket.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::SpeakingStateUpdate.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::VoiceTick.into(), receiver);
     }
 
-    ctx.reply(":wave: **Doorknob has joined the call.**")
-        .await?;
+    if manager.join(guild_id, channel).await.is_ok() {
+        ctx.reply(":wave: **Doorknob has joined the call.**")
+            .await?;
+    } else {
+        manager.remove(guild_id).await?;
+    }
 
     Ok(())
 }
@@ -116,7 +187,7 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
 /// Make the bot leave the call.
 #[poise::command(slash_command)]
 async fn leave(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling leave command");
+    info!("Handling leave command.");
 
     let manager = manager(ctx).await;
 
@@ -136,7 +207,7 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
 /// Mute the bot.
 #[poise::command(slash_command)]
 async fn mute(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling mute command");
+    info!("Handling mute command.");
 
     let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
@@ -160,7 +231,7 @@ async fn mute(ctx: Context<'_>) -> Result<(), Error> {
 /// Receive a simple diagnostic response.
 #[poise::command(slash_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling ping command");
+    info!("Handling ping command.");
 
     ctx.reply(":white_check_mark: **Doorknob is online.**")
         .await?;
@@ -171,7 +242,7 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 /// Undeafen the bot.
 #[poise::command(slash_command)]
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling undeafen command");
+    info!("Handling undeafen command.");
 
     let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
@@ -195,7 +266,7 @@ async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
 /// Unmute the bot.
 #[poise::command(slash_command)]
 async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling unmute command");
+    info!("Handling unmute command.");
 
     let Some(handler_lock) = handler(ctx).await else {
         ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
@@ -219,7 +290,7 @@ async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
 /// Retrieve the bot's uptime.
 #[poise::command(slash_command)]
 async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling uptime command");
+    info!("Handling uptime command.");
 
     let elapsed = ctx.data().start_time.elapsed().as_secs();
     let message = format!(":clock5: **Doorknob has been online for {elapsed} seconds.**");
