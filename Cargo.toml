@@ -22,8 +22,12 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.98"
+dashmap = "6.1.0"
 poise = "0.6.1"
+reqwest = "0.12.20"
 serenity = "0.12.4"
+songbird = { version = "0.5.0", features = ["receive"] }
+symphonia = { version = "0.5.4", features = ["mp3"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"

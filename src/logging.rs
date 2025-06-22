@@ -19,5 +19,5 @@ use tracing::info;
 pub fn init() {
     tracing_subscriber::fmt::init();
 
-    info!("Initialized the logging system");
+    info!("Initialized the logging system.");
 }

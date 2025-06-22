@@ -14,12 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{env, time::Instant};
+use std::{
+    env,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Instant,
+};
 
 use anyhow::Error;
-use poise::{Command, Framework, FrameworkOptions};
+use dashmap::DashMap;
+use poise::{Command, Framework, FrameworkOptions, async_trait};
+use reqwest::Client as HttpClient;
 use serenity::{Client, all::GatewayIntents};
-use tracing::{error, info};
+use songbird::{
+    Call, CoreEvent, Event, EventContext, EventHandler, SerenityInit, Songbird,
+    events::context_data::VoiceTick,
+    input::YoutubeDl,
+    model::{id::UserId, payload::Speaking},
+};
+use tokio::sync::Mutex;
+use tracing::{info, warn};
 
 struct Data {
     start_time: Instant,
@@ -27,13 +43,108 @@ struct Data {
 
 type Context<'a> = poise::Context<'a, Data, Error>;
 
+#[derive(Clone)]
+struct Receiver {
+    inner: Arc<InnerReceiver>,
+}
+
+struct InnerReceiver {
+    last_tick_was_empty: AtomicBool,
+    known_ssrcs: DashMap<u32, UserId>,
+}
+
+impl Receiver {
+    fn new() -> Self {
+        Self {
+            inner: Arc::new(InnerReceiver {
+                last_tick_was_empty: AtomicBool::default(),
+                known_ssrcs: DashMap::new(),
+            }),
+        }
+    }
+
+    fn handle_client_disconnect() {
+        info!("Received client disconnect event.");
+    }
+
+    fn handle_rtcp_packet() {
+        info!("Received RTCP packet event.");
+    }
+
+    fn handle_rtp_packet() {
+        info!("Received RTP packet event.");
+    }
+
+    fn handle_speaking_state_update(&self, ssrc: u32, user_id: Option<&UserId>) {
+        info!("Received speaking state update event.");
+
+        if let Some(user) = user_id {
+            self.inner.known_ssrcs.insert(ssrc, *user);
+        }
+    }
+
+    fn handle_voice_tick(&self, tick: &VoiceTick) {
+        let speaking = tick.speaking.len();
+        let total_participants = speaking + tick.silent.len();
+        let last_tick_was_empty = self.inner.last_tick_was_empty.load(Ordering::SeqCst);
+
+        if speaking == 0 && !last_tick_was_empty {
+            info!("Received voice tick with no speakers.");
+
+            self.inner.last_tick_was_empty.store(true, Ordering::SeqCst);
+        } else if speaking != 0 {
+            info!("Received voice tick with {speaking}/{total_participants} speakers.");
+
+            self.inner
+                .last_tick_was_empty
+                .store(false, Ordering::SeqCst);
+        }
+    }
+
+    fn handle_unknown() {
+        warn!("Received unexpected event.");
+    }
+}
+
+#[async_trait]
+impl EventHandler for Receiver {
+    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
+        match ctx {
+            EventContext::ClientDisconnect(_) => Receiver::handle_client_disconnect(),
+            EventContext::RtcpPacket(_) => Receiver::handle_rtcp_packet(),
+            EventContext::RtpPacket(_) => Receiver::handle_rtp_packet(),
+            EventContext::SpeakingStateUpdate(Speaking { ssrc, user_id, .. }) => {
+                self.handle_speaking_state_update(*ssrc, user_id.as_ref());
+            }
+            EventContext::VoiceTick(tick) => self.handle_voice_tick(tick),
+            _ => Receiver::handle_unknown(),
+        }
+
+        None
+    }
+}
+
 /// Deafen the bot.
 #[poise::command(slash_command)]
 async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling deafen command");
+    info!("Handling deafen command.");
 
-    ctx.reply(":ear_with_hearing_aid: **Doorknob is now deafened.**")
-        .await?;
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_deaf() {
+        ctx.reply(":x: **Doorknob is already deafened.**").await?;
+    } else {
+        handler.deafen(true).await?;
+
+        ctx.reply(":ear_with_hearing_aid: **Doorknob is now deafened.**")
+            .await?;
+    }
 
     Ok(())
 }
@@ -41,10 +152,51 @@ async fn deafen(ctx: Context<'_>) -> Result<(), Error> {
 /// Make the bot join the call.
 #[poise::command(slash_command)]
 async fn join(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling join command");
+    info!("Handling join command.");
 
-    ctx.reply(":wave: **Doorknob has joined the call.**")
-        .await?;
+    let (guild_id, channel_id) = {
+        let guild = ctx.guild().unwrap();
+
+        let guild_id = guild.id;
+
+        let author_id = &ctx.author().id;
+
+        let channel_id = guild
+            .voice_states
+            .get(author_id)
+            .and_then(|voice_state| voice_state.channel_id);
+
+        (guild_id, channel_id)
+    };
+
+    let Some(channel) = channel_id else {
+        ctx.reply(":x: **Doorknob couldn't find your voice call.**")
+            .await?;
+
+        return Ok(());
+    };
+
+    let manager = manager(ctx).await;
+
+    {
+        let handler_lock = manager.get_or_insert(guild_id);
+        let mut handler = handler_lock.lock().await;
+
+        let receiver = Receiver::new();
+
+        handler.add_global_event(CoreEvent::ClientDisconnect.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::RtcpPacket.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::RtpPacket.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::SpeakingStateUpdate.into(), receiver.clone());
+        handler.add_global_event(CoreEvent::VoiceTick.into(), receiver);
+    }
+
+    if manager.join(guild_id, channel).await.is_ok() {
+        ctx.reply(":wave: **Doorknob has joined the call.**")
+            .await?;
+    } else {
+        manager.remove(guild_id).await?;
+    }
 
     Ok(())
 }
@@ -52,9 +204,19 @@ async fn join(ctx: Context<'_>) -> Result<(), Error> {
 /// Make the bot leave the call.
 #[poise::command(slash_command)]
 async fn leave(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling leave command");
+    info!("Handling leave command.");
 
-    ctx.reply(":door: **Doorknob has left the call.**").await?;
+    let manager = manager(ctx).await;
+
+    let guild_id = ctx.guild_id().unwrap();
+    let has_handler = manager.get(guild_id).is_some();
+
+    if has_handler {
+        manager.remove(guild_id).await?;
+        ctx.reply(":door: **Doorknob has left the call.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+    }
 
     Ok(())
 }
@@ -62,9 +224,23 @@ async fn leave(ctx: Context<'_>) -> Result<(), Error> {
 /// Mute the bot.
 #[poise::command(slash_command)]
 async fn mute(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling mute command");
+    info!("Handling mute command.");
 
-    ctx.reply(":mute: **Doorknob is now muted.**").await?;
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_mute() {
+        ctx.reply(":x: **Doorknob is already muted.**").await?;
+    } else {
+        handler.mute(true).await?;
+
+        ctx.reply(":mute: **Doorknob is now muted.**").await?;
+    }
 
     Ok(())
 }
@@ -72,9 +248,55 @@ async fn mute(ctx: Context<'_>) -> Result<(), Error> {
 /// Receive a simple diagnostic response.
 #[poise::command(slash_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling ping command");
+    info!("Handling ping command.");
 
     ctx.reply(":white_check_mark: **Doorknob is online.**")
+        .await?;
+
+    Ok(())
+}
+
+/// Have the bot play audio.
+#[poise::command(slash_command)]
+async fn play(ctx: Context<'_>, url: String) -> Result<(), Error> {
+    info!("Handling play command.");
+
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    let client = HttpClient::new();
+
+    let input = YoutubeDl::new(client, url);
+
+    handler.play_input(input.into());
+
+    ctx.reply(":loud_sound: **Doorknob is now playing audio.**")
+        .await?;
+
+    Ok(())
+}
+
+/// Have the bot stop playing audio.
+#[poise::command(slash_command)]
+async fn stop(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Handling stop command.");
+
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    handler.stop();
+
+    ctx.reply(":mute: **Doorknob has stopped playing audio.**")
         .await?;
 
     Ok(())
@@ -83,9 +305,23 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 /// Undeafen the bot.
 #[poise::command(slash_command)]
 async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling undeafen command");
+    info!("Handling undeafen command.");
 
-    ctx.reply(":ear: **Doorknob is now undeafened.**").await?;
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_deaf() {
+        handler.deafen(false).await?;
+
+        ctx.reply(":ear: **Doorknob is now undeafened.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob is already undeafened.**").await?;
+    }
 
     Ok(())
 }
@@ -93,9 +329,23 @@ async fn undeafen(ctx: Context<'_>) -> Result<(), Error> {
 /// Unmute the bot.
 #[poise::command(slash_command)]
 async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling unmute command");
+    info!("Handling unmute command.");
 
-    ctx.reply(":speaker: **Doorknob is now unmuted.**").await?;
+    let Some(handler_lock) = handler(ctx).await else {
+        ctx.reply(":x: **Doorknob isn't in a voice call.**").await?;
+
+        return Ok(());
+    };
+
+    let mut handler = handler_lock.lock().await;
+
+    if handler.is_mute() {
+        handler.mute(false).await?;
+
+        ctx.reply(":speaker: **Doorknob is now unmuted.**").await?;
+    } else {
+        ctx.reply(":x: **Doorknob is already unmuted.**").await?;
+    }
 
     Ok(())
 }
@@ -103,7 +353,7 @@ async fn unmute(ctx: Context<'_>) -> Result<(), Error> {
 /// Retrieve the bot's uptime.
 #[poise::command(slash_command)]
 async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
-    info!("Handling uptime command");
+    info!("Handling uptime command.");
 
     let elapsed = ctx.data().start_time.elapsed().as_secs();
     let message = format!(":clock5: **Doorknob has been online for {elapsed} seconds.**");
@@ -113,12 +363,23 @@ async fn uptime(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn init() {
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token to be specified");
+async fn handler(ctx: Context<'_>) -> Option<Arc<Mutex<Call>>> {
+    let manager = manager(ctx).await;
+    let guild_id = ctx.guild_id().unwrap();
 
-    let intents = GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+    manager.get(guild_id)
+}
+
+async fn manager(ctx: Context<'_>) -> Arc<Songbird> {
+    let context = ctx.serenity_context();
+
+    songbird::get(context).await.unwrap().clone()
+}
+
+pub async fn init() -> Result<(), Error> {
+    let token = env::var("DISCORD_TOKEN")?;
+
+    let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
 
     let options = FrameworkOptions {
         commands: vec![
@@ -127,6 +388,8 @@ pub async fn init() {
             leave(),
             mute(),
             ping(),
+            play(),
+            stop(),
             undeafen(),
             unmute(),
             uptime(),
@@ -158,10 +421,10 @@ pub async fn init() {
 
     let mut client = Client::builder(token, intents)
         .framework(framework)
-        .await
-        .expect("Failed to create client");
+        .register_songbird()
+        .await?;
 
-    if let Err(why) = client.start().await {
-        error!("Failed to start client: {why:?}");
-    }
+    client.start().await?;
+
+    Ok(())
 }
