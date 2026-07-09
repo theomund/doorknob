@@ -1,0 +1,15 @@
+{
+  "name": "doorknob",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "DanielGavin.ols",
+        "ms-azuretools.vscode-containers",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  }
+}
