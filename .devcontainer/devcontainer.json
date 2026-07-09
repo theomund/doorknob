@@ -7,9 +7,13 @@
     "vscode": {
       "extensions": [
         "DanielGavin.ols",
+        "GitHub.vscode-github-actions",
         "ms-azuretools.vscode-containers",
         "ms-vscode.makefile-tools"
-      ]
+      ],
+      "settings": {
+        "ols.server.path": "ols"
+      }
     }
   }
 }

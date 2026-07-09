@@ -1,0 +1,23 @@
+---
+name: linux
+run-name: Linux Build
+"on": [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Login to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Start Development Container
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/theomund/doorknob/devcontainer
+          cacheFrom: ghcr.io/theomund/doorknob/devcontainer
+          push: always
+          runCmd: make all
