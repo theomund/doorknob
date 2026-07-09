@@ -1,6 +1,7 @@
 package discord
 
 import "base:runtime"
+import "core:encoding/json"
 import "core:log"
 import curl "vendor:curl"
 
@@ -11,8 +12,9 @@ Error :: union {
 }
 
 Gateway :: struct {
-	ctx:    runtime.Context,
-	handle: ^curl.CURL,
+	ctx:      runtime.Context,
+	handle:   ^curl.CURL,
+	sequence: uint,
 }
 
 read_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, instream: rawptr) -> uint {
@@ -31,8 +33,14 @@ write_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, outstream: 
 
 	switch meta.flags {
 	case curl.WS_TEXT:
-		frame := string(buffer[:n])
-		log.info("Received 'TEXT' frame:", frame)
+		frame := buffer[:n]
+		log.info("Received 'TEXT' frame:", string(frame))
+
+		event: Event
+		json.unmarshal(frame, &event)
+		log.infof("Received '%v' gateway event: %v", event.op, event)
+
+		if event.s != nil do gateway.sequence = event.s.?
 	case curl.WS_CLOSE:
 		log.warn("Received 'CLOSE' frame")
 	case:
