@@ -26,10 +26,15 @@ write_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, outstream: 
 	gateway := cast(^Gateway)outstream
 	context = gateway.ctx
 
+	meta := curl.ws_meta(gateway.handle)
 	n := size * nitems
-	frame := string(buffer[:n])
 
-	log.info("Received gateway frame:", frame)
+	if .TEXT in meta.flags {
+		frame := string(buffer[:n])
+		log.info("Received 'TEXT' frame:", frame)
+	} else if .CLOSE in meta.flags {
+		log.warn("Received 'CLOSE' frame")
+	}
 
 	return n
 }
