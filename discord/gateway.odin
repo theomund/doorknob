@@ -29,11 +29,14 @@ write_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, outstream: 
 	meta := curl.ws_meta(gateway.handle)
 	n := size * nitems
 
-	if .TEXT in meta.flags {
+	switch meta.flags {
+	case curl.WS_TEXT:
 		frame := string(buffer[:n])
 		log.info("Received 'TEXT' frame:", frame)
-	} else if .CLOSE in meta.flags {
+	case curl.WS_CLOSE:
 		log.warn("Received 'CLOSE' frame")
+	case:
+		log.warn("Received 'UNKNOWN' frame")
 	}
 
 	return n
