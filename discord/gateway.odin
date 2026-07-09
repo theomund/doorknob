@@ -40,37 +40,43 @@ read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) 
 	gateway := cast(^Gateway)instream
 	context = gateway.ctx
 
+	n := size * nitems
+
+	if gateway.err = read_helper(buffer, n, gateway); gateway.err != nil do return gateway.paused ? curl.READFUNC_PAUSE : curl.READFUNC_ABORT
+
+	return n
+}
+
+read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Error {
 	if gateway.sent == 0 {
-		if gateway.events.len == 0 {
+		event, ok := queue.pop_front_safe(&gateway.events)
+		if !ok {
 			gateway.paused = true
-			return curl.READFUNC_PAUSE
+			return .E_GOT_NOTHING
 		}
 
-		event := queue.pop_front(&gateway.events)
-		gateway.outbound_frame, gateway.err = json.marshal(event)
+		gateway.outbound_frame = json.marshal(event) or_return
 
-		if curl.ws_start_frame(
-			   gateway.handle,
-			   u32(curl.WS_TEXT),
-			   curl.off_t(len(gateway.outbound_frame)),
-		   ) !=
-		   .E_OK {
-			return curl.READFUNC_ABORT
-		}
+		curl.ws_start_frame(
+			gateway.handle,
+			u32(curl.WS_TEXT),
+			curl.off_t(len(gateway.outbound_frame)),
+		) or_return
 	}
 
-	n := min(size * nitems, uint(len(gateway.outbound_frame)) - gateway.sent)
+	n := min(count, uint(len(gateway.outbound_frame)) - gateway.sent)
 
 	copy(buffer[:n], gateway.outbound_frame[gateway.sent:gateway.sent + n])
 
 	gateway.sent += n
 
 	if gateway.sent == len(gateway.outbound_frame) {
+		log.info("Sent text frame:", string(gateway.outbound_frame))
 		gateway.sent = 0
-		destroy_outbound(gateway)
+		destroy_outbound(gateway) or_return
 	}
 
-	return n
+	return nil
 }
 
 write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr) -> uint {
@@ -79,19 +85,26 @@ write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr
 
 	n := size * nitems
 
+	if gateway.err = write_helper(buffer, n, gateway); gateway.err != nil do return 0
+
+	return n
+}
+
+write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	meta := curl.ws_meta(gateway.handle)
-	if meta == nil do return 0
+	if meta == nil do return .E_GOT_NOTHING
 
-	append(&gateway.inbound_frame, ..buffer[:n])
+	append(&gateway.inbound_frame, ..buffer[:n]) or_return
 
-	if meta.bytesleft != 0 do return n
+	if meta.bytesleft != 0 do return nil
 
 	switch meta.flags {
 	case curl.WS_TEXT:
-		log.info("Received text frame:", string(gateway.inbound_frame[:]))
+		frame := gateway.inbound_frame[:]
+		log.info("Received text frame:", string(frame))
 
 		event: Event
-		gateway.err = json.unmarshal(gateway.inbound_frame[:], &event)
+		json.unmarshal(frame, &event) or_return
 		defer destroy_event(&event)
 
 		log.info("Received gateway event:", event)
@@ -103,7 +116,7 @@ write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr
 			hello := event.d.(Hello)
 			gateway.heartbeat_interval = time.Duration(hello.heartbeat_interval) * time.Millisecond
 		case .Heartbeat:
-			gateway.err = enqueue(gateway, Event{op = .Heartbeat, d = gateway.sequence})
+			enqueue(gateway, heartbeat(gateway.sequence)) or_return
 		}
 
 	case curl.WS_CLOSE:
@@ -112,26 +125,30 @@ write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr
 		log.warn("Received unhandled frame")
 	}
 
-	destroy_inbound(gateway)
-
-	return n
+	return destroy_inbound(gateway)
 }
 
 xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: i64) -> curl.code {
 	gateway := cast(^Gateway)clientp
 	context = gateway.ctx
 
-	if gateway.heartbeat_interval == 0 do return .E_OK
-
-	current_time := time.now()
-	elapsed := time.diff(gateway.last_run, current_time)
-
-	if (elapsed >= gateway.heartbeat_interval) {
-		gateway.last_run = current_time
-		gateway.err = enqueue(gateway, Event{op = .Heartbeat, d = gateway.sequence})
-	}
+	if gateway.err = xferinfo_helper(gateway); gateway.err != nil do return .E_ABORTED_BY_CALLBACK
 
 	return .E_OK
+}
+
+xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
+	if gateway.heartbeat_interval != 0 {
+		current_time := time.now()
+		elapsed := time.diff(gateway.last_run, current_time)
+
+		if (elapsed >= gateway.heartbeat_interval) {
+			gateway.last_run = current_time
+			enqueue(gateway, heartbeat(gateway.sequence)) or_return
+		}
+	}
+
+	return nil
 }
 
 enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
@@ -145,30 +162,38 @@ enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
 	return nil
 }
 
-destroy_event :: proc(event: ^Event) {
+destroy_event :: proc(event: ^Event) -> Error {
 	if event.t != nil {
-		delete(event.t.?)
+		delete(event.t.?) or_return
 		event.t = nil
 	}
+
+	return nil
 }
 
-destroy_inbound :: proc(gateway: ^Gateway) {
-	delete(gateway.inbound_frame)
+destroy_inbound :: proc(gateway: ^Gateway) -> Error {
+	delete(gateway.inbound_frame) or_return
 	gateway.inbound_frame = nil
+
+	return nil
 }
 
-destroy_outbound :: proc(gateway: ^Gateway) {
-	delete(gateway.outbound_frame)
+destroy_outbound :: proc(gateway: ^Gateway) -> Error {
+	delete(gateway.outbound_frame) or_return
 	gateway.outbound_frame = nil
+
+	return nil
 }
 
-destroy_gateway :: proc(gateway: ^Gateway) {
-	destroy_inbound(gateway)
-	destroy_outbound(gateway)
+destroy_gateway :: proc(gateway: ^Gateway) -> Error {
+	destroy_inbound(gateway) or_return
+	destroy_outbound(gateway) or_return
 
-	for event, ok := queue.pop_front_safe(&gateway.events); ok; do destroy_event(&event)
+	for event, ok := queue.pop_front_safe(&gateway.events); ok; do destroy_event(&event) or_return
 
 	queue.destroy(&gateway.events)
+
+	return nil
 }
 
 run :: proc() -> Error {

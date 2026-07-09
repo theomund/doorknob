@@ -27,3 +27,7 @@ Event :: struct {
 	s:  Maybe(uint),
 	t:  Maybe(string),
 }
+
+heartbeat :: proc(sequence: uint) -> Event {
+	return Event{op = .Heartbeat, d = sequence}
+}
