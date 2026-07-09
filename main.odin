@@ -1,7 +1,7 @@
 package main
 
-import "core:fmt"
+import "discord"
 
 main :: proc() {
-	fmt.println("Hello, world!")
+	discord.run()
 }
