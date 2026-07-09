@@ -25,7 +25,7 @@ Gateway :: struct {
 	sequence: uint,
 }
 
-read_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, instream: rawptr) -> uint {
+read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
 	gateway := cast(^Gateway)instream
 	context = gateway.ctx
 
@@ -57,7 +57,7 @@ read_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, instream: ra
 	return n
 }
 
-write_callback :: proc "c" (buffer: [^]u8, size: uint, nitems: uint, outstream: rawptr) -> uint {
+write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr) -> uint {
 	gateway := cast(^Gateway)outstream
 	context = gateway.ctx
 

@@ -6,13 +6,13 @@ Hello :: struct {
 
 Data :: union {
 	Hello,
-	uint
+	uint,
 }
 
 Operation :: enum {
-	Heartbeat = 1,
-	Hello = 10,
-	Heartbeat_Ack = 11
+	Heartbeat     = 1,
+	Hello         = 10,
+	Heartbeat_Ack = 11,
 }
 
 Event :: struct {
