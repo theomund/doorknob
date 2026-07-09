@@ -89,7 +89,7 @@ enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
 	queue.push(&gateway.events, event) or_return
 
 	if gateway.paused == true {
-        curl.easy_pause(gateway.handle, curl.PAUSE_SEND_CONT) or_return
+		curl.easy_pause(gateway.handle, curl.PAUSE_SEND_CONT) or_return
 		gateway.paused = false
 	}
 
