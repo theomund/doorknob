@@ -10,15 +10,15 @@ import "base:runtime"
 import "core:container/queue"
 import "core:encoding/json"
 import "core:log"
+import "core:os"
 import "core:time"
 import curl "vendor:curl"
-
-GATEWAY_URL :: "wss://gateway.discord.gg/?v=10&encoding=json"
 
 Error :: union {
 	curl.code,
 	json.Marshal_Error,
 	json.Unmarshal_Error,
+	os.General_Error,
 	runtime.Allocator_Error,
 }
 
@@ -34,6 +34,7 @@ Gateway :: struct {
 	paused:             bool,
 	sent:               uint,
 	sequence:           uint,
+	token:              string,
 }
 
 read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
@@ -71,7 +72,7 @@ read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Error {
 	gateway.sent += n
 
 	if gateway.sent == len(gateway.outbound_frame) {
-		log.info("Sent text frame:", string(gateway.outbound_frame))
+		log.debug("Sent text frame:", string(gateway.outbound_frame))
 		gateway.sent = 0
 		destroy_outbound(gateway) or_return
 	}
@@ -101,7 +102,7 @@ write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	switch meta.flags {
 	case curl.WS_TEXT:
 		frame := gateway.inbound_frame[:]
-		log.info("Received text frame:", string(frame))
+		log.debug("Received text frame:", string(frame))
 
 		event: Event
 		json.unmarshal(frame, &event) or_return
@@ -115,10 +116,11 @@ write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 		case .Hello:
 			hello := event.d.(Hello)
 			gateway.heartbeat_interval = time.Duration(hello.heartbeat_interval) * time.Millisecond
+
+			enqueue(gateway, identify(gateway.token)) or_return
 		case .Heartbeat:
 			enqueue(gateway, heartbeat(gateway.sequence)) or_return
 		}
-
 	case curl.WS_CLOSE:
 		log.warn("Received close frame")
 	case:
@@ -204,10 +206,15 @@ run :: proc() -> Error {
 	if handle == nil do return .E_FAILED_INIT
 	defer curl.easy_cleanup(handle)
 
+	token := os.get_env("DISCORD_TOKEN", context.allocator)
+	if token == "" do return .Env_Var_Not_Found
+	defer delete(token)
+
 	gateway := Gateway {
 		ctx      = context,
 		handle   = handle,
 		last_run = time.now(),
+		token    = token,
 	}
 	defer destroy_gateway(&gateway)
 

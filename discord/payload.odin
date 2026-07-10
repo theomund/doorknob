@@ -10,13 +10,24 @@ Hello :: struct {
 	heartbeat_interval: uint,
 }
 
+Identify :: struct {
+	token:      string,
+	intents:    uint,
+	properties: struct {
+		os, browser, device: string,
+	},
+}
+
 Data :: union {
 	Hello,
+	Identify,
 	uint,
 }
 
 Operation :: enum {
+	Dispatch      = 0,
 	Heartbeat     = 1,
+	Identify      = 2,
 	Hello         = 10,
 	Heartbeat_Ack = 11,
 }
@@ -30,4 +41,15 @@ Event :: struct {
 
 heartbeat :: proc(sequence: uint) -> Event {
 	return Event{op = .Heartbeat, d = sequence}
+}
+
+identify :: proc(token: string) -> Event {
+	return Event {
+		op = .Identify,
+		d = Identify {
+			token = token,
+			intents = INTENTS,
+			properties = {os = ODIN_OS_STRING, browser = NAME, device = NAME},
+		},
+	}
 }
