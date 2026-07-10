@@ -6,6 +6,8 @@
 
 package discord
 
+import "core:encoding/json"
+
 Hello :: struct {
 	heartbeat_interval: uint,
 }
@@ -18,12 +20,6 @@ Identify :: struct {
 	},
 }
 
-Data :: union {
-	Hello,
-	Identify,
-	uint,
-}
-
 Operation :: enum {
 	Dispatch      = 0,
 	Heartbeat     = 1,
@@ -34,22 +30,32 @@ Operation :: enum {
 
 Event :: struct {
 	op: Operation,
-	d:  Data,
+	d:  json.Value,
 	s:  Maybe(uint),
 	t:  Maybe(string),
 }
 
-heartbeat :: proc(sequence: uint) -> Event {
-	return Event{op = .Heartbeat, d = sequence}
+to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
+	bytes := json.marshal(raw) or_return
+	value = json.parse(data = bytes, parse_integers = true) or_return
+
+	return value, nil
 }
 
-identify :: proc(token: string) -> Event {
-	return Event {
-		op = .Identify,
-		d = Identify {
-			token = token,
-			intents = INTENTS,
-			properties = {os = ODIN_OS_STRING, browser = NAME, device = NAME},
-		},
+heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
+	value := to_value(sequence) or_return
+
+	return Event{op = .Heartbeat, d = value}, nil
+}
+
+identify :: proc(token: string) -> (event: Event, err: Error) {
+	data := Identify {
+		token = token,
+		intents = INTENTS,
+		properties = {os = ODIN_OS_STRING, browser = NAME, device = NAME},
 	}
+
+	value := to_value(data) or_return
+
+	return Event{op = .Identify, d = value}, nil
 }

@@ -16,6 +16,7 @@ import curl "vendor:curl"
 
 Error :: union {
 	curl.code,
+	json.Error,
 	json.Marshal_Error,
 	json.Unmarshal_Error,
 	os.General_Error,
@@ -108,19 +109,7 @@ write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 		json.unmarshal(frame, &event) or_return
 		defer destroy_event(&event)
 
-		log.info("Received gateway event:", event)
-
-		if event.s != nil do gateway.sequence = event.s.?
-
-		#partial switch event.op {
-		case .Hello:
-			hello := event.d.(Hello)
-			gateway.heartbeat_interval = time.Duration(hello.heartbeat_interval) * time.Millisecond
-
-			enqueue(gateway, identify(gateway.token)) or_return
-		case .Heartbeat:
-			enqueue(gateway, heartbeat(gateway.sequence)) or_return
-		}
+		handle_event(gateway, event) or_return
 	case curl.WS_CLOSE:
 		log.warn("Received close frame")
 	case:
@@ -146,7 +135,9 @@ xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
 
 		if (elapsed >= gateway.heartbeat_interval) {
 			gateway.last_run = current_time
-			enqueue(gateway, heartbeat(gateway.sequence)) or_return
+
+			heartbeat_event := heartbeat(gateway.sequence) or_return
+			enqueue(gateway, heartbeat_event) or_return
 		}
 	}
 
@@ -159,6 +150,26 @@ enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
 	if gateway.paused == true {
 		curl.easy_pause(gateway.handle, curl.PAUSE_SEND_CONT) or_return
 		gateway.paused = false
+	}
+
+	return nil
+}
+
+handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
+	log.info("Received gateway event:", event)
+
+	if event.s != nil do gateway.sequence = event.s.?
+
+	#partial switch event.op {
+	case .Hello:
+		heartbeat_interval := event.d.(json.Object)["heartbeat_interval"].(json.Integer)
+		gateway.heartbeat_interval = time.Duration(heartbeat_interval) * time.Millisecond
+
+		identify_event := identify(gateway.token) or_return
+		enqueue(gateway, identify_event) or_return
+	case .Heartbeat:
+		heartbeat_event := heartbeat(gateway.sequence) or_return
+		enqueue(gateway, heartbeat_event) or_return
 	}
 
 	return nil
