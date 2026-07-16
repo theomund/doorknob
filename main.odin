@@ -7,6 +7,7 @@
 package main
 
 import "core:log"
+import "core:os"
 
 main :: proc() {
 	context.logger = log.create_console_logger()
@@ -14,5 +15,6 @@ main :: proc() {
 
 	if err := run(); err != nil {
 		log.error("Encountered error:", err)
+		os.exit(1)
 	}
 }
