@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package discord
+package main
 
 GATEWAY_URL :: "wss://gateway.discord.gg/?v=10&encoding=json"
 INTENTS :: 33411

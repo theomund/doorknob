@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package discord
+package main
 
 import "base:runtime"
 import "core:container/queue"
@@ -209,7 +209,7 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	return nil
 }
 
-run :: proc() -> Error {
+start_gateway :: proc() -> Error {
 	curl.global_init(curl.GLOBAL_ALL) or_return
 	defer curl.global_cleanup()
 

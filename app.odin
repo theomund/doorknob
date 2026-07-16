@@ -6,13 +6,6 @@
 
 package main
 
-import "core:log"
-
-main :: proc() {
-	context.logger = log.create_console_logger()
-	defer log.destroy_console_logger(context.logger)
-
-	if err := run(); err != nil {
-		log.error("Encountered error:", err)
-	}
+run :: proc() -> Error {
+	return start_gateway()
 }
