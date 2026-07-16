@@ -8,33 +8,6 @@ package main
 
 import "core:encoding/json"
 
-Hello :: struct {
-	heartbeat_interval: uint,
-}
-
-Identify :: struct {
-	token:      string,
-	intents:    uint,
-	properties: struct {
-		os, browser, device: string,
-	},
-}
-
-Operation :: enum {
-	Dispatch      = 0,
-	Heartbeat     = 1,
-	Identify      = 2,
-	Hello         = 10,
-	Heartbeat_Ack = 11,
-}
-
-Event :: struct {
-	op: Operation,
-	d:  json.Value,
-	s:  Maybe(uint),
-	t:  Maybe(string),
-}
-
 to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 	bytes := json.marshal(raw) or_return
 	value = json.parse(data = bytes, parse_integers = true) or_return

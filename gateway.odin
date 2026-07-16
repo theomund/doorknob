@@ -6,37 +6,12 @@
 
 package main
 
-import "base:runtime"
 import "core:container/queue"
 import "core:encoding/json"
 import "core:log"
 import "core:os"
 import "core:time"
 import curl "vendor:curl"
-
-Error :: union {
-	curl.code,
-	json.Error,
-	json.Marshal_Error,
-	json.Unmarshal_Error,
-	os.General_Error,
-	runtime.Allocator_Error,
-}
-
-Gateway :: struct {
-	ctx:                runtime.Context,
-	err:                Error,
-	events:             queue.Queue(Event),
-	handle:             ^curl.CURL,
-	heartbeat_interval: time.Duration,
-	inbound_frame:      [dynamic]byte,
-	last_run:           time.Time,
-	outbound_frame:     []byte,
-	paused:             bool,
-	sent:               uint,
-	sequence:           uint,
-	token:              string,
-}
 
 read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
 	gateway := cast(^Gateway)instream
