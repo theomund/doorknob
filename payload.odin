@@ -10,18 +10,20 @@ import "core:encoding/json"
 
 to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 	bytes := json.marshal(raw) or_return
+	defer delete(bytes)
+
 	value = json.parse(data = bytes, parse_integers = true) or_return
 
 	return value, nil
 }
 
-heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
+new_heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
 	value := to_value(sequence) or_return
 
 	return Event{op = .Heartbeat, d = value}, nil
 }
 
-identify :: proc(token: string) -> (event: Event, err: Error) {
+new_identify :: proc(token: string) -> (event: Event, err: Error) {
 	data := Identify {
 		token = token,
 		intents = INTENTS,

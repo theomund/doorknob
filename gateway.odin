@@ -121,8 +121,8 @@ xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
 		if (elapsed >= gateway.heartbeat_interval) {
 			gateway.last_run = current_time
 
-			heartbeat_event := heartbeat(gateway.sequence) or_return
-			enqueue(gateway, heartbeat_event) or_return
+			heartbeat := new_heartbeat(gateway.sequence) or_return
+			enqueue(gateway, heartbeat) or_return
 		}
 	}
 
@@ -152,11 +152,11 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 		heartbeat_interval := event.d.(json.Object)["heartbeat_interval"].(json.Integer)
 		gateway.heartbeat_interval = time.Duration(heartbeat_interval) * time.Millisecond
 
-		identify_event := identify(gateway.token) or_return
-		enqueue(gateway, identify_event) or_return
+		identify := new_identify(gateway.token) or_return
+		enqueue(gateway, identify) or_return
 	case .Heartbeat:
-		heartbeat_event := heartbeat(gateway.sequence) or_return
-		enqueue(gateway, heartbeat_event) or_return
+		heartbeat := new_heartbeat(gateway.sequence) or_return
+		enqueue(gateway, heartbeat) or_return
 	}
 
 	return nil
