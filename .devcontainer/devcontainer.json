@@ -21,5 +21,8 @@
         "ols.server.path": "ols"
       }
     }
-  }
+  },
+  "securityOpt": [
+    "seccomp=unconfined"
+  ]
 }

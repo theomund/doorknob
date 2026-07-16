@@ -9,6 +9,7 @@ RUN dnf copr enable -y sisyphus1813/odin-lang \
     clang-22.1.8 \
     git-2.55.0 \
     hadolint-2.14.0 \
+    kcov-43 \
     libcurl-devel-8.18.0 \
     mbedtls-devel-3.6.6 \
     odin-lang-2026.07 \
