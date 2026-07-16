@@ -3,8 +3,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 FROM quay.io/fedora/fedora:44
-RUN dnf copr enable -y sisyphus1813/odin-lang \ 
+RUN dnf copr enable -y sisyphus1813/odin-lang \
     && dnf install -y \
+    bash-completion-2.17 \
     clang-22.1.8 \
     git-2.55.0 \
     hadolint-2.14.0 \
