@@ -22,10 +22,10 @@ format:
 
 lint:
 	hadolint .devcontainer/Dockerfile
-	odin check . -vet
+	odin check . -strict-style -vet
 	yamllint .github/workflows/linux.yml
 
-run:	
+run:
 	odin run .
 
 test:

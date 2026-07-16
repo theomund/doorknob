@@ -19,7 +19,9 @@ read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) 
 
 	n := size * nitems
 
-	if gateway.err = read_helper(buffer, n, gateway); gateway.err != nil do return gateway.paused ? curl.READFUNC_PAUSE : curl.READFUNC_ABORT
+	if gateway.err = read_helper(buffer, n, gateway); gateway.err != nil {
+		return gateway.paused ? curl.READFUNC_PAUSE : curl.READFUNC_ABORT
+	}
 
 	return n
 }
@@ -62,18 +64,24 @@ write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr
 
 	n := size * nitems
 
-	if gateway.err = write_helper(buffer, n, gateway); gateway.err != nil do return 0
+	if gateway.err = write_helper(buffer, n, gateway); gateway.err != nil {
+		return 0
+	}
 
 	return n
 }
 
 write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	meta := curl.ws_meta(gateway.handle)
-	if meta == nil do return .E_GOT_NOTHING
+	if meta == nil {
+		return .E_GOT_NOTHING
+	}
 
 	append(&gateway.inbound_frame, ..buffer[:n]) or_return
 
-	if meta.bytesleft != 0 do return nil
+	if meta.bytesleft != 0 {
+		return nil
+	}
 
 	switch meta.flags {
 	case curl.WS_TEXT:
@@ -98,7 +106,9 @@ xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: 
 	gateway := cast(^Gateway)clientp
 	context = gateway.ctx
 
-	if gateway.err = xferinfo_helper(gateway); gateway.err != nil do return .E_ABORTED_BY_CALLBACK
+	if gateway.err = xferinfo_helper(gateway); gateway.err != nil {
+		return .E_ABORTED_BY_CALLBACK
+	}
 
 	return .E_OK
 }
@@ -133,7 +143,9 @@ enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
 handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 	log.info("Received gateway event:", event)
 
-	if event.s != nil do gateway.sequence = event.s.?
+	if event.s != nil {
+		gateway.sequence = event.s.?
+	}
 
 	#partial switch event.op {
 	case .Hello:
@@ -177,7 +189,9 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	destroy_inbound(gateway) or_return
 	destroy_outbound(gateway) or_return
 
-	for event, ok := queue.pop_front_safe(&gateway.events); ok; do destroy_event(&event) or_return
+	for event, ok := queue.pop_front_safe(&gateway.events); ok; {
+		destroy_event(&event) or_return
+	}
 
 	queue.destroy(&gateway.events)
 
@@ -189,11 +203,15 @@ start_gateway :: proc() -> Error {
 	defer curl.global_cleanup()
 
 	handle := curl.easy_init()
-	if handle == nil do return .E_FAILED_INIT
+	if handle == nil {
+		return .E_FAILED_INIT
+	}
 	defer curl.easy_cleanup(handle)
 
 	token := os.get_env("DISCORD_TOKEN", context.allocator)
-	if token == "" do return .Env_Var_Not_Found
+	if token == "" {
+		return .Env_Var_Not_Found
+	}
 	defer delete(token)
 
 	gateway := Gateway {
@@ -214,7 +232,9 @@ start_gateway :: proc() -> Error {
 	curl.easy_setopt(handle, .XFERINFODATA, &gateway) or_return
 	curl.easy_setopt(handle, .XFERINFOFUNCTION, xferinfo_callback) or_return
 
-	if err := curl.easy_perform(handle); err != nil do return gateway.err != nil ? gateway.err : err
+	if err := curl.easy_perform(handle); err != nil {
+		return gateway.err != nil ? gateway.err : err
+	}
 
 	return nil
 }
