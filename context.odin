@@ -13,9 +13,9 @@ new_context :: proc() -> runtime.Context {
 	ctx := runtime.default_context()
 	ctx.logger = log.create_console_logger()
 
-    return ctx
+	return ctx
 }
 
 destroy_context :: proc(ctx: runtime.Context) {
-    log.destroy_console_logger(ctx.logger)
+	log.destroy_console_logger(ctx.logger)
 }

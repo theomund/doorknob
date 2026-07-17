@@ -7,5 +7,7 @@
 package main
 
 GATEWAY_URL :: "wss://gateway.discord.gg/?v=10&encoding=json"
+REST_URL :: "https://discord.com/api/v10"
+
 INTENTS :: 33411
 NAME :: "doorknob"

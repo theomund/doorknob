@@ -61,6 +61,12 @@ Operation :: enum {
 	Heartbeat_Ack = 11,
 }
 
+REST :: struct {
+	ctx:    runtime.Context,
+	handle: ^curl.CURL,
+	token:  string,
+}
+
 Value :: union {
 	cstring,
 	curl.write_callback,
