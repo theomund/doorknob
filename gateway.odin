@@ -63,11 +63,9 @@ write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr
 
 	n := size * nitems
 
-	if gateway.err = write_helper(buffer, n, gateway); gateway.err != nil {
-		return 0
-	}
+	gateway.err = write_helper(buffer, n, gateway)
 
-	return n
+	return gateway.err != nil ? 0 : n
 }
 
 write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
@@ -105,11 +103,9 @@ xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: 
 	gateway := cast(^Gateway)clientp
 	context = gateway.ctx
 
-	if gateway.err = xferinfo_helper(gateway); gateway.err != nil {
-		return i32(curl.code.E_ABORTED_BY_CALLBACK)
-	}
+	gateway.err = xferinfo_helper(gateway)
 
-	return i32(curl.code.E_OK)
+	return gateway.err != nil ? i32(curl.code.E_ABORTED_BY_CALLBACK) : i32(curl.code.E_OK)
 }
 
 xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
