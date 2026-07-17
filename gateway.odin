@@ -162,6 +162,8 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 }
 
 destroy_event :: proc(event: ^Event) -> Error {
+	json.destroy_value(event.d)
+
 	if event.t != nil {
 		delete(event.t.?) or_return
 		event.t = nil

@@ -19,3 +19,16 @@ test_new_heartbeat :: proc(t: ^testing.T) {
 	testing.expect_value(t, heartbeat.op, Operation.Heartbeat)
 	testing.expect_value(t, heartbeat.d.(json.Integer), 1)
 }
+
+@(test)
+test_new_identify :: proc(t: ^testing.T) {
+	token := "foo"
+
+	identify, err := new_identify(token)
+	if err != nil {
+		testing.fail(t)
+	}
+	defer destroy_event(&identify)
+
+	testing.expect_value(t, identify.d.(json.Object)["token"].(json.String), token)
+}
