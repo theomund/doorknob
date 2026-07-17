@@ -7,7 +7,7 @@ ifneq (,$(wildcard ./.env))
 	export
 endif
 
-.PHONY: all build clean coverage format lint run test
+.PHONY: all build clean coverage debug format lint run test
 
 all: lint test build
 
