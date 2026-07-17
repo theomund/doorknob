@@ -8,6 +8,17 @@ package main
 
 import "core:encoding/json"
 
+destroy_event :: proc(event: ^Event) -> Error {
+	json.destroy_value(event.d)
+
+	if event.t != nil {
+		delete(event.t.?) or_return
+		event.t = nil
+	}
+
+	return nil
+}
+
 to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 	bytes := json.marshal(raw) or_return
 	defer delete(bytes)

@@ -161,17 +161,6 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 	return nil
 }
 
-destroy_event :: proc(event: ^Event) -> Error {
-	json.destroy_value(event.d)
-
-	if event.t != nil {
-		delete(event.t.?) or_return
-		event.t = nil
-	}
-
-	return nil
-}
-
 destroy_inbound :: proc(gateway: ^Gateway) -> Error {
 	delete(gateway.inbound_frame) or_return
 	gateway.inbound_frame = nil
