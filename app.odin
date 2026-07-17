@@ -27,7 +27,10 @@ run :: proc() -> Error {
 	running: i32
 
 	for {
-		curl.multi_perform(multi, &running) or_return
+		if err := curl.multi_perform(multi, &running); err != nil {
+			return gateway.err != nil ? gateway.err : err
+		}
+
 		if running == 0 {
 			break
 		}
