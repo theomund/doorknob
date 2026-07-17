@@ -101,15 +101,15 @@ write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	return destroy_inbound(gateway)
 }
 
-xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: i64) -> curl.code {
+xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: i64) -> i32 {
 	gateway := cast(^Gateway)clientp
 	context = gateway.ctx
 
 	if gateway.err = xferinfo_helper(gateway); gateway.err != nil {
-		return .E_ABORTED_BY_CALLBACK
+		return i32(curl.code.E_ABORTED_BY_CALLBACK)
 	}
 
-	return .E_OK
+	return i32(curl.code.E_OK)
 }
 
 xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
@@ -198,7 +198,7 @@ new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 		token    = get_token() or_return,
 	}
 
-	options := make(map[curl.option]any)
+	options := make(map[curl.option]Value)
 	defer delete(options)
 
 	options[.NOPROGRESS] = 0

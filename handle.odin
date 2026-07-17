@@ -6,6 +6,7 @@
 
 package main
 
+import "core:log"
 import curl "vendor:curl"
 
 new_handle :: proc() -> (handle: ^curl.CURL, err: Error) {
@@ -17,9 +18,15 @@ new_handle :: proc() -> (handle: ^curl.CURL, err: Error) {
 	return handle, nil
 }
 
-set_options :: proc(handle: ^curl.CURL, options: map[curl.option]any) -> Error {
+set_options :: proc(handle: ^curl.CURL, options: map[curl.option]Value) -> Error {
 	for key, value in options {
-		curl.easy_setopt(handle, key, value) or_return
+		switch v in value {
+		case cstring, curl.write_callback, curl.xferinfo_callback, i64, rawptr:
+			curl.easy_setopt(handle, key, v) or_return
+			log.debug("Assigned option", key, "with value:", v)
+		case:
+			return .E_SETOPT_OPTION_SYNTAX
+		}
 	}
 
 	return nil

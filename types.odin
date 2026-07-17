@@ -60,3 +60,11 @@ Operation :: enum {
 	Hello         = 10,
 	Heartbeat_Ack = 11,
 }
+
+Value :: union {
+	cstring,
+	curl.write_callback,
+	curl.xferinfo_callback,
+	i64,
+	rawptr,
+}
