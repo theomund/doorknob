@@ -10,8 +10,8 @@ import "core:log"
 import "core:os"
 
 main :: proc() {
-	context.logger = log.create_console_logger()
-	defer log.destroy_console_logger(context.logger)
+	context = new_context()
+	defer destroy_context(context)
 
 	if err := run(); err != nil {
 		log.error("Encountered error:", err)
