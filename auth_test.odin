@@ -17,7 +17,7 @@ test_get_token :: proc(t: ^testing.T) {
 	if err != nil {
 		testing.fail(t)
 	}
-    defer delete(token)
+	defer delete(token)
 
 	testing.expect_value(t, token, "foo")
 }
