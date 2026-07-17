@@ -189,15 +189,6 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	return nil
 }
 
-new_handle :: proc() -> (handle: ^curl.CURL, err: Error) {
-	handle = curl.easy_init()
-	if handle == nil {
-		return handle, .E_FAILED_INIT
-	}
-
-	return handle, nil
-}
-
 new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 	gateway = new(Gateway) or_return
 	gateway^ = Gateway {
@@ -207,15 +198,20 @@ new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 		token    = get_token() or_return,
 	}
 
-	curl.easy_setopt(gateway.handle, .NOPROGRESS, 0) or_return
-	curl.easy_setopt(gateway.handle, .READDATA, gateway) or_return
-	curl.easy_setopt(gateway.handle, .READFUNCTION, read_callback) or_return
-	curl.easy_setopt(gateway.handle, .UPLOAD, 1) or_return
-	curl.easy_setopt(gateway.handle, .URL, GATEWAY_URL) or_return
-	curl.easy_setopt(gateway.handle, .WRITEDATA, gateway) or_return
-	curl.easy_setopt(gateway.handle, .WRITEFUNCTION, write_callback) or_return
-	curl.easy_setopt(gateway.handle, .XFERINFODATA, gateway) or_return
-	curl.easy_setopt(gateway.handle, .XFERINFOFUNCTION, xferinfo_callback) or_return
+	options := make(map[curl.option]any)
+	defer delete(options)
+
+	options[.NOPROGRESS] = 0
+	options[.READDATA] = gateway
+	options[.READFUNCTION] = read_callback
+	options[.UPLOAD] = 1
+	options[.URL] = GATEWAY_URL
+	options[.WRITEDATA] = gateway
+	options[.WRITEFUNCTION] = write_callback
+	options[.XFERINFODATA] = gateway
+	options[.XFERINFOFUNCTION] = xferinfo_callback
+
+	set_options(gateway.handle, options)
 
 	return gateway, nil
 }
