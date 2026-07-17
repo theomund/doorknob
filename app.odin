@@ -6,6 +6,11 @@
 
 package main
 
+import curl "vendor:curl"
+
 run :: proc() -> Error {
+	curl.global_init(curl.GLOBAL_ALL) or_return
+	defer curl.global_cleanup()
+
 	return start_gateway()
 }

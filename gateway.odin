@@ -199,9 +199,6 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 }
 
 start_gateway :: proc() -> Error {
-	curl.global_init(curl.GLOBAL_ALL) or_return
-	defer curl.global_cleanup()
-
 	handle := curl.easy_init()
 	if handle == nil {
 		return .E_FAILED_INIT
