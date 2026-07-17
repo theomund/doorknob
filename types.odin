@@ -45,10 +45,6 @@ Gateway :: struct {
 	token:              string,
 }
 
-Hello :: struct {
-	heartbeat_interval: uint,
-}
-
 Identify :: struct {
 	token:      string,
 	intents:    uint,
