@@ -21,6 +21,10 @@ coverage:
 	odin build . -build-mode:test -debug
 	kcov --dump-summary --exclude-pattern=_test.odin --include-path=. .kcov doorknob
 
+debug:
+	odin build . -debug
+	lldb doorknob
+
 format:
 	odinfmt . -w
 
