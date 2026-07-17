@@ -9,7 +9,6 @@ package main
 import "core:container/queue"
 import "core:encoding/json"
 import "core:log"
-import "core:os"
 import "core:time"
 import curl "vendor:curl"
 
@@ -194,30 +193,23 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	}
 
 	queue.destroy(&gateway.events)
+	curl.easy_cleanup(gateway.handle)
 
 	return nil
 }
 
-start_gateway :: proc() -> Error {
+new_gateway :: proc() -> (gateway: Gateway, err: Error) {
 	handle := curl.easy_init()
 	if handle == nil {
-		return .E_FAILED_INIT
+		return gateway, .E_FAILED_INIT
 	}
-	defer curl.easy_cleanup(handle)
 
-	token := os.get_env("DISCORD_TOKEN", context.allocator)
-	if token == "" {
-		return .Env_Var_Not_Found
-	}
-	defer delete(token)
-
-	gateway := Gateway {
+	gateway = Gateway {
 		ctx      = context,
 		handle   = handle,
 		last_run = time.now(),
-		token    = token,
+		token    = get_token() or_return,
 	}
-	defer destroy_gateway(&gateway)
 
 	curl.easy_setopt(handle, .NOPROGRESS, 0) or_return
 	curl.easy_setopt(handle, .READDATA, &gateway) or_return
@@ -229,9 +221,5 @@ start_gateway :: proc() -> Error {
 	curl.easy_setopt(handle, .XFERINFODATA, &gateway) or_return
 	curl.easy_setopt(handle, .XFERINFOFUNCTION, xferinfo_callback) or_return
 
-	if err := curl.easy_perform(handle); err != nil {
-		return gateway.err != nil ? gateway.err : err
-	}
-
-	return nil
+	return gateway, nil
 }

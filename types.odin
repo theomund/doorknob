@@ -15,6 +15,7 @@ import curl "vendor:curl"
 
 Error :: union {
 	curl.code,
+	curl.Mcode,
 	json.Error,
 	json.Marshal_Error,
 	json.Unmarshal_Error,
