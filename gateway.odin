@@ -211,7 +211,7 @@ new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 	options[.XFERINFODATA] = gateway
 	options[.XFERINFOFUNCTION] = xferinfo_callback
 
-	set_options(gateway.handle, options)
+	set_options(gateway.handle, options) or_return
 
 	return gateway, nil
 }
