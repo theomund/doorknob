@@ -24,15 +24,9 @@ run :: proc() -> Error {
 	curl.multi_add_handle(multi, gateway.handle) or_return
 	defer curl.multi_remove_handle(multi, gateway.handle)
 
-	running: i32
-
-	for {
+	for running: i32 = -1; running != 0; {
 		if err := curl.multi_perform(multi, &running); err != nil {
 			return gateway.err != nil ? gateway.err : err
-		}
-
-		if running == 0 {
-			break
 		}
 
 		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
