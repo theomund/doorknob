@@ -10,9 +10,6 @@ import "core:os"
 
 get_token :: proc() -> (token: string, err: Error) {
 	token = os.get_env("DISCORD_TOKEN", context.allocator)
-	if token == "" {
-		return token, .Env_Var_Not_Found
-	}
 
-	return token, nil
+	return token, token == "" ? .Env_Var_Not_Found : nil
 }

@@ -9,13 +9,10 @@ package main
 import "core:log"
 import curl "vendor:curl"
 
-new_handle :: proc() -> (handle: ^curl.CURL, err: Error) {
-	handle = curl.easy_init()
-	if handle == nil {
-		return handle, .E_FAILED_INIT
-	}
+new_handle :: proc() -> (^curl.CURL, Error) {
+	handle := curl.easy_init()
 
-	return handle, nil
+	return handle, handle == nil ? .E_FAILED_INIT : nil
 }
 
 set_options :: proc(handle: ^curl.CURL, options: map[curl.option]Value) -> Error {
