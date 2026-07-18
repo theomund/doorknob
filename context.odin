@@ -6,15 +6,16 @@
 
 package main
 
+import "base:runtime"
 import "core:log"
-import "core:os"
 
-main :: proc() {
-	context = new_context()
-	defer destroy_context(context)
+new_context :: proc() -> runtime.Context {
+	ctx := runtime.default_context()
+	ctx.logger = log.create_console_logger()
 
-	if err := run(); err != nil {
-		log.error("Encountered error:", err)
-		os.exit(1)
-	}
+	return ctx
+}
+
+destroy_context :: proc(ctx: runtime.Context) {
+	log.destroy_console_logger(ctx.logger)
 }

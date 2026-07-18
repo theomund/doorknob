@@ -7,7 +7,7 @@ ifneq (,$(wildcard ./.env))
 	export
 endif
 
-.PHONY: all build clean format lint run test
+.PHONY: all build clean coverage debug format lint run test
 
 all: lint test build
 
@@ -17,15 +17,23 @@ build:
 clean:
 	git clean -fdxe ".env"
 
+coverage:
+	odin build . -build-mode:test -debug
+	kcov --dump-summary --exclude-pattern=_test.odin --include-path=. .kcov doorknob
+
+debug:
+	odin build . -debug
+	lldb doorknob
+
 format:
 	odinfmt . -w
 
 lint:
 	hadolint .devcontainer/Dockerfile
-	odin check . -vet
+	odin check . -strict-style -vet
 	yamllint .github/workflows/linux.yml
 
-run:	
+run:
 	odin run .
 
 test:

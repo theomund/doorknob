@@ -4,51 +4,37 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-package discord
+package main
 
 import "core:encoding/json"
 
-Hello :: struct {
-	heartbeat_interval: uint,
-}
+destroy_event :: proc(event: ^Event) -> Error {
+	json.destroy_value(event.d)
 
-Identify :: struct {
-	token:      string,
-	intents:    uint,
-	properties: struct {
-		os, browser, device: string,
-	},
-}
+	if event.t != nil {
+		delete(event.t.?) or_return
+		event.t = nil
+	}
 
-Operation :: enum {
-	Dispatch      = 0,
-	Heartbeat     = 1,
-	Identify      = 2,
-	Hello         = 10,
-	Heartbeat_Ack = 11,
-}
-
-Event :: struct {
-	op: Operation,
-	d:  json.Value,
-	s:  Maybe(uint),
-	t:  Maybe(string),
+	return nil
 }
 
 to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 	bytes := json.marshal(raw) or_return
+	defer delete(bytes)
+
 	value = json.parse(data = bytes, parse_integers = true) or_return
 
 	return value, nil
 }
 
-heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
+new_heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
 	value := to_value(sequence) or_return
 
 	return Event{op = .Heartbeat, d = value}, nil
 }
 
-identify :: proc(token: string) -> (event: Event, err: Error) {
+new_identify :: proc(token: string) -> (event: Event, err: Error) {
 	data := Identify {
 		token = token,
 		intents = INTENTS,
