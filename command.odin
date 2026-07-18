@@ -21,9 +21,7 @@ register_command :: proc(command: Command) -> (rest: ^REST, err: Error) {
 		{"/applications/", app, "/guilds/", guild, "/commands"},
 	) or_return
 
-	data := json.marshal(
-		command
-	) or_return
+	data := json.marshal(command) or_return
 
 	return new_rest(endpoint, data)
 }
