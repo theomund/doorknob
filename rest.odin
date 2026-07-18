@@ -34,13 +34,15 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	rest^ = {
 		ctx    = context,
 		handle = new_handle() or_return,
-		token  = get_token() or_return,
 	}
 
 	options := make(map[curl.option]Value)
 	defer delete(options)
 
-	authorization := combine_strings({"Authorization: Bot ", rest.token}) or_return
+	token := get_token() or_return
+	defer delete(token)
+
+	authorization := combine_strings({"Authorization: Bot ", token}) or_return
 	url := combine_strings({REST_URL, endpoint}) or_return
 
 	options[.HTTPHEADER] = set_headers({authorization, "Content-Type: application/json"})
@@ -73,7 +75,5 @@ combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 }
 
 destroy_rest :: proc(rest: ^REST) {
-	delete(rest.token)
-
 	curl.easy_cleanup(rest.handle)
 }

@@ -69,12 +69,9 @@ Operation :: enum {
 }
 
 REST :: struct {
-	app:    string,
 	ctx:    runtime.Context,
 	err:    Error,
-	guild:  string,
 	handle: ^curl.CURL,
-	token:  string,
 }
 
 Response :: struct {
