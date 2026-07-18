@@ -146,6 +146,14 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 	}
 
 	#partial switch event.op {
+	case .Dispatch:
+		switch type := event.t.?; type {
+		case "INTERACTION_CREATE":
+			command := event.d.(json.Object)["data"].(json.Object)["name"].(json.String)
+			log.debug("Received interactive command:", command)
+		case:
+			log.warn("Received unhandled dispatch type:", type)
+		}
 	case .Hello:
 		heartbeat_interval := event.d.(json.Object)["heartbeat_interval"].(json.Integer)
 		gateway.heartbeat_interval = time.Duration(heartbeat_interval) * time.Millisecond
