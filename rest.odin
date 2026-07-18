@@ -40,14 +40,10 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	options := make(map[curl.option]Value)
 	defer delete(options)
 
-	combined := strings.concatenate({"Authorization: Bot ", rest.token}) or_return
-	authorization := strings.clone_to_cstring(combined) or_return
+	authorization := combine_strings({"Authorization: Bot ", rest.token}) or_return
+	url := combine_strings({REST_URL, endpoint}) or_return
 
 	options[.HTTPHEADER] = set_headers({authorization, "Content-Type: application/json"})
-
-	combined = strings.concatenate({REST_URL, endpoint}) or_return
-	url := strings.clone_to_cstring(combined) or_return
-
 	options[.URL] = url
 	options[.WRITEDATA] = rest
 	options[.WRITEFUNCTION] = rest_write_callback
@@ -67,6 +63,13 @@ set_headers :: proc(headers: []cstring) -> (chunk: ^curl.slist) {
 	}
 
 	return chunk
+}
+
+combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
+	combined := strings.concatenate(pieces) or_return
+	clone := strings.clone_to_cstring(combined) or_return
+
+	return clone, nil
 }
 
 destroy_rest :: proc(rest: ^REST) {

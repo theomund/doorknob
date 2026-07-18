@@ -18,7 +18,6 @@ new_gateway :: proc(multi: ^curl.CURLM) -> (gateway: ^Gateway, err: Error) {
 		ctx      = context,
 		handle   = new_handle() or_return,
 		last_run = time.now(),
-		multi    = multi,
 		token    = get_token() or_return,
 	}
 
@@ -185,9 +184,14 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 			id := d["id"].(json.String)
 			token := d["token"].(json.String)
 			response := new_response("Pong!")
-
 			rest := respond(response, id, token) or_return
-			curl.multi_add_handle(gateway.multi, rest.handle) or_return
+
+			queue.push_back(&gateway.rests, rest) or_return
+		case "READY":
+			ping := new_command("ping", "Responds with a pong message.")
+			rest := register_command(ping) or_return
+
+			queue.push_back(&gateway.rests, rest) or_return
 		case:
 			log.warn("Received unhandled dispatch type:", type)
 		}

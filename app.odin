@@ -6,6 +6,7 @@
 
 package main
 
+import "core:container/queue"
 import curl "vendor:curl"
 
 run :: proc() -> Error {
@@ -21,15 +22,14 @@ run :: proc() -> Error {
 	curl.multi_add_handle(multi, gateway.handle) or_return
 	defer curl.multi_remove_handle(multi, gateway.handle)
 
-	ping := new_command("ping", "Responds with a pong message.")
-	register_ping := register_command(ping) or_return
-
-	curl.multi_add_handle(multi, register_ping.handle) or_return
-	defer curl.multi_remove_handle(multi, register_ping.handle)
-
 	for running: i32 = -1; running != 0; {
 		curl.multi_perform(multi, &running) or_return
 		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
+
+		for rest, ok := queue.pop_front_safe(&gateway.rests); ok; {
+			curl.multi_add_handle(multi, rest.handle) or_return
+			defer curl.multi_remove_handle(multi, rest.handle)
+		}
 	}
 
 	return nil
