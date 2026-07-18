@@ -44,6 +44,7 @@ Gateway :: struct {
 	heartbeat_interval: time.Duration,
 	inbound_frame:      [dynamic]byte,
 	last_run:           time.Time,
+	multi:              ^curl.CURLM,
 	outbound_frame:     []byte,
 	paused:             bool,
 	sent:               uint,
@@ -74,6 +75,13 @@ REST :: struct {
 	guild:  string,
 	handle: ^curl.CURL,
 	token:  string,
+}
+
+Response :: struct {
+	type: uint,
+	data: struct {
+		content: string,
+	},
 }
 
 Value :: union {

@@ -12,6 +12,34 @@ import "core:log"
 import "core:time"
 import curl "vendor:curl"
 
+new_gateway :: proc(multi: ^curl.CURLM) -> (gateway: ^Gateway, err: Error) {
+	gateway = new(Gateway) or_return
+	gateway^ = Gateway {
+		ctx      = context,
+		handle   = new_handle() or_return,
+		last_run = time.now(),
+		multi    = multi,
+		token    = get_token() or_return,
+	}
+
+	options := make(map[curl.option]Value)
+	defer delete(options)
+
+	options[.NOPROGRESS] = 0
+	options[.READDATA] = gateway
+	options[.READFUNCTION] = gateway_read_callback
+	options[.UPLOAD] = 1
+	options[.URL] = GATEWAY_URL
+	options[.WRITEDATA] = gateway
+	options[.WRITEFUNCTION] = gateway_write_callback
+	options[.XFERINFODATA] = gateway
+	options[.XFERINFOFUNCTION] = gateway_xferinfo_callback
+
+	set_options(gateway.handle, options) or_return
+
+	return gateway, nil
+}
+
 gateway_read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
 	gateway := cast(^Gateway)instream
 	context = gateway.ctx
@@ -149,13 +177,24 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 	case .Dispatch:
 		switch type := event.t.?; type {
 		case "INTERACTION_CREATE":
-			command := event.d.(json.Object)["data"].(json.Object)["name"].(json.String)
+			d := event.d.(json.Object)
+
+			command := d["data"].(json.Object)["name"].(json.String)
 			log.debug("Received interactive command:", command)
+
+			id := d["id"].(json.String)
+			token := d["token"].(json.String)
+			response := new_response("Pong!")
+
+			rest := respond(response, id, token) or_return
+			curl.multi_add_handle(gateway.multi, rest.handle) or_return
 		case:
 			log.warn("Received unhandled dispatch type:", type)
 		}
 	case .Hello:
-		heartbeat_interval := event.d.(json.Object)["heartbeat_interval"].(json.Integer)
+		d := event.d.(json.Object)
+
+		heartbeat_interval := d["heartbeat_interval"].(json.Integer)
 		gateway.heartbeat_interval = time.Duration(heartbeat_interval) * time.Millisecond
 
 		identify := new_identify(gateway.token) or_return
@@ -194,31 +233,4 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	curl.easy_cleanup(gateway.handle)
 
 	return nil
-}
-
-new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
-	gateway = new(Gateway) or_return
-	gateway^ = Gateway {
-		ctx      = context,
-		handle   = new_handle() or_return,
-		last_run = time.now(),
-		token    = get_token() or_return,
-	}
-
-	options := make(map[curl.option]Value)
-	defer delete(options)
-
-	options[.NOPROGRESS] = 0
-	options[.READDATA] = gateway
-	options[.READFUNCTION] = gateway_read_callback
-	options[.UPLOAD] = 1
-	options[.URL] = GATEWAY_URL
-	options[.WRITEDATA] = gateway
-	options[.WRITEFUNCTION] = gateway_write_callback
-	options[.XFERINFODATA] = gateway
-	options[.XFERINFOFUNCTION] = gateway_xferinfo_callback
-
-	set_options(gateway.handle, options) or_return
-
-	return gateway, nil
 }
