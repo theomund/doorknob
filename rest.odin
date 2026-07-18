@@ -43,11 +43,7 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	combined := strings.concatenate({"Authorization: Bot ", rest.token}) or_return
 	authorization := strings.clone_to_cstring(combined) or_return
 
-	chunk: ^curl.slist
-	chunk = curl.slist_append(chunk, authorization)
-	chunk = curl.slist_append(chunk, "Content-Type: application/json")
-
-	options[.HTTPHEADER] = chunk
+	options[.HTTPHEADER] = set_headers({authorization, "Content-Type: application/json"})
 
 	combined = strings.concatenate({REST_URL, endpoint}) or_return
 	url := strings.clone_to_cstring(combined) or_return
@@ -63,6 +59,14 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	set_options(rest.handle, options) or_return
 
 	return rest, nil
+}
+
+set_headers :: proc(headers: []cstring) -> (chunk: ^curl.slist) {
+	for header in headers {
+		chunk = curl.slist_append(chunk, header)
+	}
+
+	return chunk
 }
 
 destroy_rest :: proc(rest: ^REST) {

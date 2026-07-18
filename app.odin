@@ -28,16 +28,7 @@ run :: proc() -> Error {
 	defer curl.multi_remove_handle(multi, register_ping.handle)
 
 	for running: i32 = -1; running != 0; {
-		if err := curl.multi_perform(multi, &running); err != nil {
-			if gateway.err != nil {
-				return gateway.err
-			} else if register_ping.err != nil {
-				return register_ping.err
-			} else {
-				return err
-			}
-		}
-
+		curl.multi_perform(multi, &running) or_return
 		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
 	}
 
