@@ -12,20 +12,20 @@ import "core:log"
 import "core:time"
 import curl "vendor:curl"
 
-read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
+gateway_read_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, instream: rawptr) -> uint {
 	gateway := cast(^Gateway)instream
 	context = gateway.ctx
 
 	n := size * nitems
 
-	if gateway.err = read_helper(buffer, n, gateway); gateway.err != nil {
+	if gateway.err = gateway_read_helper(buffer, n, gateway); gateway.err != nil {
 		return gateway.paused ? curl.READFUNC_PAUSE : curl.READFUNC_ABORT
 	}
 
 	return n
 }
 
-read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Error {
+gateway_read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Error {
 	if gateway.sent == 0 {
 		event, ok := queue.pop_front_safe(&gateway.events)
 		if !ok {
@@ -57,18 +57,18 @@ read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Error {
 	return nil
 }
 
-write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr) -> uint {
+gateway_write_callback :: proc "c" (buffer: [^]u8, size, nitems: uint, outstream: rawptr) -> uint {
 	gateway := cast(^Gateway)outstream
 	context = gateway.ctx
 
 	n := size * nitems
 
-	gateway.err = write_helper(buffer, n, gateway)
+	gateway.err = gateway_write_helper(buffer, n, gateway)
 
 	return gateway.err != nil ? 0 : n
 }
 
-write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
+gateway_write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	meta := curl.ws_meta(gateway.handle)
 	if meta == nil {
 		return .E_GOT_NOTHING
@@ -99,16 +99,19 @@ write_helper :: proc(buffer: [^]u8, n: uint, gateway: ^Gateway) -> Error {
 	return destroy_inbound(gateway)
 }
 
-xferinfo_callback :: proc "c" (clientp: rawptr, dltotal, dlnow, ultotal, ulnow: i64) -> i32 {
+gateway_xferinfo_callback :: proc "c" (
+	clientp: rawptr,
+	dltotal, dlnow, ultotal, ulnow: i64,
+) -> i32 {
 	gateway := cast(^Gateway)clientp
 	context = gateway.ctx
 
-	gateway.err = xferinfo_helper(gateway)
+	gateway.err = gateway_xferinfo_helper(gateway)
 
 	return gateway.err != nil ? i32(curl.code.E_ABORTED_BY_CALLBACK) : i32(curl.code.E_OK)
 }
 
-xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
+gateway_xferinfo_helper :: proc(gateway: ^Gateway) -> Error {
 	if gateway.heartbeat_interval != 0 {
 		current_time := time.now()
 		elapsed := time.diff(gateway.last_run, current_time)
@@ -136,7 +139,7 @@ enqueue :: proc(gateway: ^Gateway, event: Event) -> Error {
 }
 
 handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
-	log.info("Received gateway event:", event)
+	log.debug("Received gateway event:", event)
 
 	if event.s != nil {
 		gateway.sequence = event.s.?
@@ -199,13 +202,13 @@ new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 
 	options[.NOPROGRESS] = 0
 	options[.READDATA] = gateway
-	options[.READFUNCTION] = read_callback
+	options[.READFUNCTION] = gateway_read_callback
 	options[.UPLOAD] = 1
 	options[.URL] = GATEWAY_URL
 	options[.WRITEDATA] = gateway
-	options[.WRITEFUNCTION] = write_callback
+	options[.WRITEFUNCTION] = gateway_write_callback
 	options[.XFERINFODATA] = gateway
-	options[.XFERINFOFUNCTION] = xferinfo_callback
+	options[.XFERINFOFUNCTION] = gateway_xferinfo_callback
 
 	set_options(gateway.handle, options) or_return
 
