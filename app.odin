@@ -20,16 +20,15 @@ run :: proc() -> Error {
 	defer destroy_gateway(gateway)
 
 	curl.multi_add_handle(multi, gateway.handle) or_return
-	defer curl.multi_remove_handle(multi, gateway.handle)
 
 	for running: i32 = -1; running != 0; {
 		curl.multi_perform(multi, &running) or_return
-		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
 
 		if rest, ok := queue.pop_front_safe(&gateway.rests); ok {
 			curl.multi_add_handle(multi, rest.handle) or_return
-			defer curl.multi_remove_handle(multi, rest.handle)
 		}
+
+		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
 	}
 
 	return nil
