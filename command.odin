@@ -22,7 +22,7 @@ register_command :: proc(command: Command) -> (rest: ^REST, err: Error) {
 	) or_return
 
 	data := json.marshal(
-		Command{name = command.name, description = command.description, type = 1},
+		command
 	) or_return
 
 	return new_rest(endpoint, data)
