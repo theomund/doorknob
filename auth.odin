@@ -8,8 +8,20 @@ package main
 
 import "core:os"
 
-get_token :: proc() -> (token: string, err: Error) {
-	token = os.get_env("DISCORD_TOKEN", context.allocator)
+get_env :: proc(key: string) -> (string, Error) {
+	env := os.get_env(key, context.allocator)
 
-	return token, token == "" ? .Env_Var_Not_Found : nil
+	return env, env == "" ? .Env_Var_Not_Found : nil
+}
+
+get_app :: proc() -> (string, Error) {
+	return get_env("DISCORD_APP")
+}
+
+get_guild :: proc() -> (string, Error) {
+	return get_env("DISCORD_GUILD")
+}
+
+get_token :: proc() -> (string, Error) {
+	return get_env("DISCORD_TOKEN")
 }

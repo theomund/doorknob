@@ -29,7 +29,7 @@ rest_write_helper :: proc(buffer: [^]u8, n: uint, rest: ^REST) -> Error {
 	return nil
 }
 
-new_rest :: proc(endpoint: string) -> (rest: ^REST, err: Error) {
+new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error) {
 	rest = new(REST)
 	rest^ = {
 		ctx    = context,
@@ -40,12 +40,25 @@ new_rest :: proc(endpoint: string) -> (rest: ^REST, err: Error) {
 	options := make(map[curl.option]Value)
 	defer delete(options)
 
-	absolute := strings.concatenate({REST_URL, endpoint}) or_return
-	url := strings.clone_to_cstring(absolute) or_return
+	combined := strings.concatenate({"Authorization: Bot ", rest.token}) or_return
+	authorization := strings.clone_to_cstring(combined) or_return
+
+	chunk: ^curl.slist
+	chunk = curl.slist_append(chunk, authorization)
+	chunk = curl.slist_append(chunk, "Content-Type: application/json")
+
+	options[.HTTPHEADER] = chunk
+
+	combined = strings.concatenate({REST_URL, endpoint}) or_return
+	url := strings.clone_to_cstring(combined) or_return
 
 	options[.URL] = url
 	options[.WRITEDATA] = rest
 	options[.WRITEFUNCTION] = rest_write_callback
+
+	if len(data) != 0 {
+		options[.POSTFIELDS] = cstring(raw_data(data[:]))
+	}
 
 	set_options(rest.handle, options) or_return
 

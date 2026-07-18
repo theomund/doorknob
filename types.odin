@@ -13,6 +13,12 @@ import "core:os"
 import "core:time"
 import curl "vendor:curl"
 
+Command :: struct {
+	name:        string,
+	description: string,
+	type:        uint,
+}
+
 Error :: union {
 	curl.code,
 	curl.Mcode,
@@ -62,14 +68,17 @@ Operation :: enum {
 }
 
 REST :: struct {
+	app:    string,
 	ctx:    runtime.Context,
 	err:    Error,
+	guild:  string,
 	handle: ^curl.CURL,
 	token:  string,
 }
 
 Value :: union {
 	cstring,
+	curl.slist,
 	curl.write_callback,
 	curl.xferinfo_callback,
 	i64,

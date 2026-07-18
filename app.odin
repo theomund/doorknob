@@ -12,10 +12,7 @@ run :: proc() -> Error {
 	curl.global_init(curl.GLOBAL_ALL) or_return
 	defer curl.global_cleanup()
 
-	multi := curl.multi_init()
-	if multi == nil {
-		return .E_FAILED_INIT
-	}
+	multi := new_multi() or_return
 	defer curl.multi_cleanup(multi)
 
 	gateway := new_gateway() or_return
@@ -24,18 +21,18 @@ run :: proc() -> Error {
 	curl.multi_add_handle(multi, gateway.handle) or_return
 	defer curl.multi_remove_handle(multi, gateway.handle)
 
-	rest := new_rest("/gateway") or_return
-	defer destroy_rest(rest)
+	ping := new_command("ping", "Responds with a pong message.")
+	register_ping := register_command(ping) or_return
 
-	curl.multi_add_handle(multi, rest.handle) or_return
-	defer curl.multi_remove_handle(multi, rest.handle)
+	curl.multi_add_handle(multi, register_ping.handle) or_return
+	defer curl.multi_remove_handle(multi, register_ping.handle)
 
 	for running: i32 = -1; running != 0; {
 		if err := curl.multi_perform(multi, &running); err != nil {
 			if gateway.err != nil {
 				return gateway.err
-			} else if rest.err != nil {
-				return rest.err
+			} else if register_ping.err != nil {
+				return register_ping.err
 			} else {
 				return err
 			}
