@@ -236,5 +236,8 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	queue.destroy(&gateway.events)
 	curl.easy_cleanup(gateway.handle)
 
+	delete(gateway.token)
+	free(gateway)
+
 	return nil
 }

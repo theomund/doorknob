@@ -43,7 +43,10 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	defer delete(token)
 
 	authorization := combine_strings({"Authorization: Bot ", token}) or_return
+	defer delete(authorization)
+
 	url := combine_strings({REST_URL, endpoint}) or_return
+	defer delete(url)
 
 	options[.HTTPHEADER] = set_headers({authorization, "Content-Type: application/json"})
 	options[.URL] = url
@@ -69,6 +72,8 @@ set_headers :: proc(headers: []cstring) -> (chunk: ^curl.slist) {
 
 combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 	combined := strings.concatenate(pieces) or_return
+	defer delete(combined)
+
 	clone := strings.clone_to_cstring(combined) or_return
 
 	return clone, nil
@@ -76,4 +81,5 @@ combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 
 destroy_rest :: proc(rest: ^REST) {
 	curl.easy_cleanup(rest.handle)
+	free(rest)
 }
