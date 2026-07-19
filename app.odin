@@ -7,9 +7,13 @@
 package main
 
 import "core:container/queue"
+import "core:log"
+import "core:sync"
 import curl "vendor:curl"
 
 run :: proc() -> Error {
+	register_interrupt()
+
 	curl.global_init(curl.GLOBAL_ALL) or_return
 	defer curl.global_cleanup()
 
@@ -21,8 +25,14 @@ run :: proc() -> Error {
 
 	curl.multi_add_handle(multi, gateway.handle) or_return
 
-	for running: i32 = -1; running != 0; {
+	running: i32
+
+	for !sync.atomic_load(&interrupted) {
 		curl.multi_perform(multi, &running) or_return
+
+		if running == 0 {
+			break
+		}
 
 		if rest, ok := queue.pop_front_safe(&gateway.rests); ok {
 			curl.multi_add_handle(multi, rest.handle) or_return
@@ -30,6 +40,8 @@ run :: proc() -> Error {
 
 		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
 	}
+
+	log.warn("Received interrupt signal; shutting down program")
 
 	return nil
 }
