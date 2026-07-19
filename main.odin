@@ -10,8 +10,15 @@ import "core:log"
 import "core:os"
 
 main :: proc() {
-	context = new_context()
-	defer destroy_context(context)
+	when ODIN_DEBUG {
+		tracker := new_tracker()
+		context = tracker.ctx
+
+		defer delete_tracker(tracker)
+	}
+
+	context.logger = log.create_console_logger()
+	defer log.destroy_console_logger(context.logger)
 
 	if err := run(); err != nil {
 		log.error("Encountered error:", err)
