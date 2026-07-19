@@ -16,7 +16,7 @@ run :: proc() -> Error {
 	multi := new_multi() or_return
 	defer curl.multi_cleanup(multi)
 
-	gateway := new_gateway(multi) or_return
+	gateway := new_gateway() or_return
 	defer destroy_gateway(gateway)
 
 	curl.multi_add_handle(multi, gateway.handle) or_return

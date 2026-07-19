@@ -12,7 +12,7 @@ import "core:log"
 import "core:time"
 import curl "vendor:curl"
 
-new_gateway :: proc(multi: ^curl.CURLM) -> (gateway: ^Gateway, err: Error) {
+new_gateway :: proc() -> (gateway: ^Gateway, err: Error) {
 	gateway = new(Gateway) or_return
 	gateway^ = Gateway {
 		ctx      = context,
