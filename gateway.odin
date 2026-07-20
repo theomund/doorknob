@@ -59,6 +59,7 @@ gateway_read_helper :: proc(buffer: [^]u8, count: uint, gateway: ^Gateway) -> Er
 			gateway.paused = true
 			return .E_GOT_NOTHING
 		}
+		defer destroy_event(&event)
 
 		gateway.outbound_frame = json.marshal(event) or_return
 
