@@ -71,6 +71,7 @@ Operation :: enum {
 
 REST :: struct {
 	ctx:    runtime.Context,
+	data:   cstring,
 	err:    Error,
 	handle: ^curl.CURL,
 }

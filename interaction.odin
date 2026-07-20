@@ -19,5 +19,5 @@ respond :: proc(response: Response, id: string, token: string) -> (rest: ^REST, 
 
 	data := json.marshal(response) or_return
 
-	return new_rest(combined, data)
+	return new_rest(combined, string(data))
 }

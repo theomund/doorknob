@@ -29,10 +29,11 @@ rest_write_helper :: proc(buffer: [^]u8, n: uint, rest: ^REST) -> Error {
 	return nil
 }
 
-new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error) {
+new_rest :: proc(endpoint: string, data: string) -> (rest: ^REST, err: Error) {
 	rest = new(REST) or_return
 	rest^ = {
 		ctx    = context,
+		data   = strings.clone_to_cstring(data),
 		handle = new_handle() or_return,
 	}
 
@@ -53,8 +54,9 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	options[.WRITEDATA] = rest
 	options[.WRITEFUNCTION] = rest_write_callback
 
-	if len(data) != 0 {
-		options[.POSTFIELDS] = cstring(raw_data(data[:]))
+	if data != "" {
+		options[.POSTFIELDS] = rest.data
+		delete(data)
 	}
 
 	set_options(rest.handle, options) or_return
@@ -81,5 +83,7 @@ combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 
 destroy_rest :: proc(rest: ^REST) {
 	curl.easy_cleanup(rest.handle)
+
+	delete(rest.data)
 	free(rest)
 }
