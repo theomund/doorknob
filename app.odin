@@ -25,11 +25,16 @@ run :: proc() -> Error {
 
 	curl.multi_add_handle(multi, gateway.handle) or_return
 
+	handled: queue.Queue(^REST)
+
 	for running: i32 = -1; !sync.atomic_load(&interrupted) && running != 0; {
 		curl.multi_perform(multi, &running) or_return
 
-		if rest, ok := queue.pop_front_safe(&gateway.rests); ok {
+		for queue.len(gateway.rests) > 0 {
+			rest := queue.pop_front(&gateway.rests)
+
 			curl.multi_add_handle(multi, rest.handle) or_return
+			queue.push_back(&handled, rest)
 		}
 
 		curl.multi_poll(multi, nil, 0, 1000, nil) or_return
@@ -38,6 +43,15 @@ run :: proc() -> Error {
 	if sync.atomic_load(&interrupted) {
 		log.warn("Received interrupt signal; shutting down program")
 	}
+
+	for queue.len(handled) > 0 {
+		rest := queue.pop_front(&handled)
+
+		curl.multi_remove_handle(multi, rest.handle) or_return
+		destroy_rest(rest)
+	}
+
+	queue.destroy(&handled)
 
 	return nil
 }
