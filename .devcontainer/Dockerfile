@@ -12,7 +12,7 @@ RUN dnf copr enable -y sisyphus1813/odin-lang \
     kcov-43 \
     libcurl-devel-8.18.0 \
     lldb-22.1.8 \
-    mbedtls-devel-3.6.6 \
+    mbedtls-devel-3.6.7 \
     odin-lang-2026.07 \
     ols-2026.05 \
     yamllint-1.38.0 \
