@@ -9,6 +9,7 @@ package main
 import "base:runtime"
 import "core:container/queue"
 import "core:encoding/json"
+import "core:mem"
 import "core:os"
 import "core:time"
 import curl "vendor:curl"
@@ -70,6 +71,7 @@ Operation :: enum {
 
 REST :: struct {
 	ctx:    runtime.Context,
+	data:   cstring,
 	err:    Error,
 	handle: ^curl.CURL,
 }
@@ -79,6 +81,11 @@ Response :: struct {
 	data: struct {
 		content: string,
 	},
+}
+
+Tracker :: struct {
+	allocator: ^mem.Tracking_Allocator,
+	ctx:       runtime.Context,
 }
 
 Value :: union {

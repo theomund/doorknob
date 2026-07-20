@@ -15,12 +15,6 @@ new_handle :: proc() -> (^curl.CURL, Error) {
 	return handle, handle == nil ? .E_FAILED_INIT : nil
 }
 
-new_multi :: proc() -> (^curl.CURLM, Error) {
-	multi := curl.multi_init()
-
-	return multi, multi == nil ? .BAD_HANDLE : nil
-}
-
 set_options :: proc(handle: ^curl.CURL, options: map[curl.option]Value) -> Error {
 	for key, value in options {
 		switch v in value {

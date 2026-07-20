@@ -15,13 +15,17 @@ new_command :: proc(name, description: string) -> Command {
 
 register_command :: proc(command: Command) -> (rest: ^REST, err: Error) {
 	app := get_app() or_return
+	defer delete(app)
+
 	guild := get_guild() or_return
+	defer delete(guild)
 
 	endpoint := strings.concatenate(
 		{"/applications/", app, "/guilds/", guild, "/commands"},
 	) or_return
+	defer delete(endpoint)
 
 	data := json.marshal(command) or_return
 
-	return new_rest(endpoint, data)
+	return new_rest(endpoint, string(data))
 }

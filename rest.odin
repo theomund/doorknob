@@ -29,10 +29,11 @@ rest_write_helper :: proc(buffer: [^]u8, n: uint, rest: ^REST) -> Error {
 	return nil
 }
 
-new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error) {
-	rest = new(REST)
+new_rest :: proc(endpoint: string, data: string) -> (rest: ^REST, err: Error) {
+	rest = new(REST) or_return
 	rest^ = {
 		ctx    = context,
+		data   = strings.clone_to_cstring(data),
 		handle = new_handle() or_return,
 	}
 
@@ -43,15 +44,19 @@ new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error)
 	defer delete(token)
 
 	authorization := combine_strings({"Authorization: Bot ", token}) or_return
+	defer delete(authorization)
+
 	url := combine_strings({REST_URL, endpoint}) or_return
+	defer delete(url)
 
 	options[.HTTPHEADER] = set_headers({authorization, "Content-Type: application/json"})
 	options[.URL] = url
 	options[.WRITEDATA] = rest
 	options[.WRITEFUNCTION] = rest_write_callback
 
-	if len(data) != 0 {
-		options[.POSTFIELDS] = cstring(raw_data(data[:]))
+	if data != "" {
+		options[.POSTFIELDS] = rest.data
+		delete(data)
 	}
 
 	set_options(rest.handle, options) or_return
@@ -69,6 +74,8 @@ set_headers :: proc(headers: []cstring) -> (chunk: ^curl.slist) {
 
 combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 	combined := strings.concatenate(pieces) or_return
+	defer delete(combined)
+
 	clone := strings.clone_to_cstring(combined) or_return
 
 	return clone, nil
@@ -76,4 +83,7 @@ combine_strings :: proc(pieces: []string) -> (result: cstring, err: Error) {
 
 destroy_rest :: proc(rest: ^REST) {
 	curl.easy_cleanup(rest.handle)
+
+	delete(rest.data)
+	free(rest)
 }
