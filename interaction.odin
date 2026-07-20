@@ -15,6 +15,8 @@ new_response :: proc(content: string) -> Response {
 
 respond :: proc(response: Response, id: string, token: string) -> (rest: ^REST, err: Error) {
 	combined := strings.concatenate({"/interactions/", id, "/", token, "/callback"}) or_return
+	defer delete(combined)
+
 	data := json.marshal(response) or_return
 
 	return new_rest(combined, data)

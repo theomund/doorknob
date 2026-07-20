@@ -30,7 +30,7 @@ rest_write_helper :: proc(buffer: [^]u8, n: uint, rest: ^REST) -> Error {
 }
 
 new_rest :: proc(endpoint: string, data: []u8 = {}) -> (rest: ^REST, err: Error) {
-	rest = new(REST)
+	rest = new(REST) or_return
 	rest^ = {
 		ctx    = context,
 		handle = new_handle() or_return,

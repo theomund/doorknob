@@ -196,9 +196,7 @@ handle_event :: proc(gateway: ^Gateway, event: Event) -> Error {
 			log.warn("Received unhandled dispatch type:", type)
 		}
 	case .Hello:
-		d := event.d.(json.Object)
-
-		heartbeat_interval := d["heartbeat_interval"].(json.Integer)
+		heartbeat_interval := event.d.(json.Object)["heartbeat_interval"].(json.Integer)
 		gateway.heartbeat_interval = time.Duration(heartbeat_interval) * time.Millisecond
 
 		identify := new_identify(gateway.token) or_return
@@ -229,14 +227,13 @@ destroy_gateway :: proc(gateway: ^Gateway) -> Error {
 	destroy_inbound(gateway) or_return
 	destroy_outbound(gateway) or_return
 
-	for event, ok := queue.pop_front_safe(&gateway.events); ok; {
-		destroy_event(&event) or_return
-	}
-
 	queue.destroy(&gateway.events)
+	queue.destroy(&gateway.rests)
+
 	curl.easy_cleanup(gateway.handle)
 
-	delete(gateway.token)
+	delete(gateway.token) or_return
+
 	free(gateway)
 
 	return nil

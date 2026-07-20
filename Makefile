@@ -34,7 +34,7 @@ lint:
 	yamllint .github/workflows/linux.yml
 
 run:
-	odin run .
+	odin run . -debug
 
 test:
 	odin test .

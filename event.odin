@@ -8,6 +8,10 @@ package main
 
 import "core:encoding/json"
 
+new_event :: proc(op: Operation, d: json.Value) -> Event {
+	return {op, d, nil, nil}
+}
+
 destroy_event :: proc(event: ^Event) -> Error {
 	json.destroy_value(event.d)
 
@@ -23,7 +27,7 @@ to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 	bytes := json.marshal(raw) or_return
 	defer delete(bytes)
 
-	value = json.parse(data = bytes, parse_integers = true) or_return
+	value = json.parse(bytes, parse_integers = true) or_return
 
 	return value, nil
 }
@@ -31,7 +35,7 @@ to_value :: proc(raw: $T) -> (value: json.Value, err: Error) {
 new_heartbeat :: proc(sequence: uint) -> (event: Event, err: Error) {
 	value := to_value(sequence) or_return
 
-	return Event{op = .Heartbeat, d = value}, nil
+	return new_event(.Heartbeat, value), nil
 }
 
 new_identify :: proc(token: string) -> (event: Event, err: Error) {
@@ -43,5 +47,5 @@ new_identify :: proc(token: string) -> (event: Event, err: Error) {
 
 	value := to_value(data) or_return
 
-	return Event{op = .Identify, d = value}, nil
+	return new_event(.Identify, value), nil
 }
